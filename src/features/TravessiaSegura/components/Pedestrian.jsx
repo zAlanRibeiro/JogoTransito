@@ -31,10 +31,11 @@ export default function Pedestrian({ isWalking, x, y = 0 }) {
         left: `${x}px`, // Move livremente para os lados com A e D!
         transform: 'translateX(-50%)',
         position: 'absolute',
-        zIndex: 20
+        zIndex: 80
       }}
     >
-      <img src={imagemAtual} alt="Pedestre" style={{ width: '40px' }} />
+      {/* 👇 Alterado o width de 40px para 28px para deixar o boneco menor e mais proporcional */}
+      <img src={imagemAtual} alt="Pedestre" style={{ width: '28px' }} />
     </div>
   );
 }

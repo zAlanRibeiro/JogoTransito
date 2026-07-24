@@ -1,49 +1,221 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
+
+:root {
+  --nt-navy: #1e3c72;
+  --nt-orange: #ff7b00;
+  --nt-orange-dark: #e66a00;
+  --nt-danger: #e74c3c;
+  --nt-danger-dark: #c0392b;
+  --nt-success: #2ecc71;
+  --nt-success-dark: #27ae60;
+  --nt-caution: #f1c40f;
+  --nt-caution-dark: #d4ac0d;
+}
+
 /* Resets e Container Principal */
+.nit-menu-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 600px;
+  height: 400px;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); /* Azul corporativo moderno */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+  border-radius: 12px;
+}
+
+/* --- LAYOUT GRID: Baseado nas cores desenhadas --- */
+.nit-menu-card {
+  width: 90%;
+  height: 90%;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  padding: 20px 20px 30px 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  box-sizing: border-box;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.6fr 1.1fr 1.3fr; 
+  grid-template-rows: auto 1fr;
+  gap: 15px 20px;
+}
+
+/* Assinatura inserida via CSS */
+.nit-menu-card::after {
+  content: "Desenvolvido pela Gestão e Modernização";
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 10px;
+  color: #888;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.nit-content {
+  display: contents; 
+}
+
+/* --- TÍTULO: Canto Superior Esquerdo --- */
+.nit-header {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+  text-align: left;
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.nit-badge {
+  background-color: #ff7b00;
+  color: white;
+  font-size: 9px;
+  font-weight: bold;
+  padding: 3px 10px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  display: inline-block;
+  margin-bottom: 5px;
+}
+
+.nit-header h1 {
+  margin: 0;
+  font-size: 20px;
+  color: #1e3c72;
+  line-height: 1.1;
+}
+
+.nit-header p {
+  margin: 4px 0 0 0;
+  font-size: 11px;
+  color: #666;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* --- BOTÃO INICIAR: Área Amarela (Centro Superior) --- */
+.nit-start-btn {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  align-self: center;
+  justify-self: stretch;
+  background: linear-gradient(135deg, #ff7b00, #ff5500);
+  color: white;
+  border: none;
+  padding: 12px 10px;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: transform 0.1s, background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 10px rgba(255, 123, 0, 0.4);
+  text-align: center;
+}
+
+.nit-start-btn:hover {
+  background: linear-gradient(135deg, #ff8c1a, #ff661a);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(255, 123, 0, 0.5);
+}
+
+/* --- INSTRUÇÕES: Área Vermelha (Horizontal na Base) --- */
+.nit-instructions {
+  grid-column: 1 / 3;
+  grid-row: 2 / 3;
+  background: #f4f6f8;
+  padding: 12px 15px;
+  border-radius: 8px;
+  border-top: 4px solid #ff7b00;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.nit-instructions h3 {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nit-instructions ul {
+  margin: 0;
+  padding: 0; 
+  list-style: none; 
+  display: grid;
+  grid-template-columns: 1fr 1fr; 
+  gap: 10px 15px;
+}
+
+.nit-instructions li {
+  background: #ffffff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #1e3c72; 
+  box-shadow: 0 2px 5px rgba(0,0,0,0.04); 
+  font-size: 11px;
+  color: #444;
+  line-height: 1.4;
+  margin-bottom: 0;
+}
+
+.nit-instructions li strong {
+  color: #1e3c72;
+  display: block; 
+  margin-bottom: 2px;
+}
+
+/* --- BONECO/AGENTE: Área Azul (Vertical Direita) --- */
+.nit-agent-wrapper {
+  grid-column: 3 / 4;
+  grid-row: 1 / 3; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.nit-agent-img {
+  width: 170%;
+  max-width: 400px;
+  height: auto;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+}
+
 .app-container {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-color: #87CEEB; /* Céu azul */
+  background-color: #87CEEB; 
   margin: 0;
   text-align: center;
 }
-
-/* Tela de Início */
-.start-screen {
-  background: white;
-  padding: 40px;
-  border-radius: 16px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-
-.start-btn {
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  padding: 15px 30px;
-  font-size: 1.2rem;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-top: 20px;
-}
-
-.start-btn:hover { background-color: #45a049; }
 
 /* --- 1. A ARENA E O CENÁRIO DE FUNDO --- */
 .game-arena {
   position: relative;
   width: 600px;
   height: 400px;
-  margin: 100px auto; /* Dá um espaço ao redor para o scale não cortar nas bordas */
+  margin: 100px auto; 
   overflow: hidden;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   background-color: #FFFF;
-
-  /* MÁGICA DO ZOOM: Aumenta o jogo visualmente sem carregar mais nada */
-  transform: scale(1.4); /* Mude para 1.3 se quiser menor, ou 1.5 se quiser maior */
+  transform: scale(1.4); 
   transform-origin: center center;
 }
 
@@ -53,23 +225,17 @@
   position: absolute;
   top: 0;
   width: 100%;
-  z-index: 10;
+  z-index: 100;
   box-sizing: border-box;
 }
 
 .hud h2 { margin: 0; font-size: 1.2rem; color: #333; }
 
-/* O CENÁRIO ROLA INFINITAMENTE: cada trecho é posicionado via `top` calculado
-   no JS (GameArena.jsx), sempre no ciclo calçada -> rua -> rua -> calçada. */
 .scene {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
-}
-
-.scene.WASD-mode {
-  cursor: default; 
 }
 
 .segment {
@@ -90,7 +256,7 @@
   background-image: url('./assets/rua.png');
 }
 
-/* --- 2. A FAIXA DE PEDESTRE: rola junto com o mundo, uma por cada par de ruas --- */
+/* --- 2. A FAIXA DE PEDESTRE --- */
 .crosswalk {
   position: absolute;
   width: 110px;
@@ -105,8 +271,7 @@
 }
 .crosswalk .stripe { display: none; }
 
-/* --- 3. O SEMÁFORO: um por calçada de chegada, encostado na fronteira com a rua.
-   Fica fora de qualquer .segment (que tem overflow:hidden) pra não ser cortado. --- */
+/* --- 3. O SEMÁFORO --- */
 .traffic-light-container {
   position: absolute;
   right: 155px;
@@ -124,27 +289,12 @@
   object-position: center bottom;
 }
 
-.pedestrian-btn {
-  margin-top: 10px;
-  padding: 8px;
-  background-color: #f1c40f;
-  border: none;
-  border-radius: 5px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.pedestrian-btn:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
 /* --- 4. OS CARROS NA DIREÇÃO CERTA --- */
 .street-lane {
   position: absolute;
   top: 0;
   width: 100%;
-  height: 100%; /* Pega toda a altura do asfalto (100px) */
+  height: 100%; 
   z-index: 10;
 }
 
@@ -176,43 +326,120 @@
 .pedestrian {
   position: absolute;
   transform: translateX(-50%);
-  width: 40px;
-  height: 60px;
+  width: 28px;
+  height: 42px;
   z-index: 20; 
 }
 
-/* --- HUD (Pontos e Vidas em baixo um do outro) --- */
+/* --- HUD --- */
 .hud-container {
   position: absolute;
-  top: 15px;
-  left: 15px;
+  top: 12px;
+  left: 12px;
+  z-index: 90;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 30;
-  align-items: flex-start;
+  align-items: stretch;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  border: 2px solid var(--nt-navy);
+  overflow: hidden;
+}
+
+.scoreboard,
+.lives-board {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: #fff;
 }
 
 .scoreboard {
-  background-color: #fff;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-weight: bold;
-  color: #333;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  border: 2px solid #f1c40f;
-  font-size: 0.9rem;
+  color: var(--nt-navy);
+  border-right: 2px solid #eef0f4;
 }
 
 .lives-board {
-  background-color: #fff;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-weight: bold;
-  color: #e74c3c;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  border: 2px solid #e74c3c;
-  font-size: 0.9rem;
+  color: var(--nt-danger);
+}
+
+.lives-board svg + svg {
+  margin-left: -2px;
+}
+
+.scoreboard.bump {
+  animation: bumpPop 0.35s ease;
+}
+
+@keyframes bumpPop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.lives-board.shake {
+  animation: shakeX 0.4s ease;
+}
+
+@keyframes shakeX {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-3px); }
+}
+
+/* --- Aviso de sinal (Espere / Atenção / Atravesse) --- */
+.signal-badge {
+  position: absolute;
+  top: 12px;
+  right: 20px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: white;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+  border: 2px solid rgba(255,255,255,0.55);
+  transition: background 0.3s ease;
+  max-width: calc(100% - 40px);
+  white-space: nowrap;
+}
+
+.signal-badge .signal-icon {
+  display: flex;
+  line-height: 1;
+}
+
+.signal-badge.state-go {
+  background: linear-gradient(135deg, var(--nt-success), var(--nt-success-dark));
+}
+
+.signal-badge.state-caution {
+  background: linear-gradient(135deg, var(--nt-caution), var(--nt-caution-dark));
+  color: #3a2a00;
+  border-color: rgba(0,0,0,0.15);
+}
+
+.signal-badge.state-wait {
+  background: linear-gradient(135deg, var(--nt-danger), var(--nt-danger-dark));
+}
+
+.signal-badge.urgent {
+  animation: signalPulse 0.6s ease-in-out infinite;
+}
+
+@keyframes signalPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
 }
 
 /* --- Mensagem de Feedback Flutuante --- */
@@ -229,6 +456,14 @@
   z-index: 40;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   animation: fadeInOut 2s ease-in-out;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.feedback-icon {
+  flex-shrink: 0;
 }
 
 @keyframes fadeInOut {
@@ -238,7 +473,7 @@
   100% { opacity: 0; transform: translate(-50%, -10px); }
 }
 
-/* --- Feedback Modal --- */
+/* --- Feedback Modal (Derrota) --- */
 .modal-overlay {
   position: absolute;
   top: 0;
@@ -261,10 +496,6 @@
   text-align: center;
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   animation: popIn 0.3s ease-out;
-}
-
-.modal-content.success {
-  border-top: 8px solid #2ecc71;
 }
 
 .modal-content.error {
@@ -303,4 +534,127 @@
 @keyframes popIn {
   0% { transform: scale(0.8); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+/* ==================================================== */
+/* --- ANIMAÇÃO DE TRAVESSIA FLUÍDA E EXATA (NOVO) ---- */
+/* ==================================================== */
+
+/* Quando a scene ganhar a classe is-cutscene, o pedestre dentro dela fará a animação */
+.scene.is-cutscene .pedestrian {
+  /* O !important garante que essa animação assuma o controle sem piscar */
+  animation: walkTowardsHorizon 2.5s forwards ease-in-out !important;
+  transform-origin: bottom center; /* Faz ele encolher em direção ao chão */
+}
+
+@keyframes walkTowardsHorizon {
+  0% {
+    /* Começa EXATAMENTE da posição X atual e escala normal */
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    /* Vai para a frente (Y negativo) e fica menor (simulando distância) */
+    transform: translateX(-50%) translateY(-200px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* ==================================================== */
+/* --- TELA DE VITÓRIA COM A IMAGEM EM PIXEL ART --- */
+/* ==================================================== */
+.victory-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* Coloque a imagem na pasta correta ou ajuste o caminho abaixo */
+  background-image: url('./assets/95bafe7a5a7149c6bc2d0f9002b02bef~tplv-tnf8g33v4j-watermark-v2_MzExMTkyMzU5MTcy.jpg');
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100; /* Fica por cima de tudo no jogo */
+  animation: fadeIn 1.5s ease-in;
+}
+
+.victory-panel {
+  background-color: rgba(0, 0, 0, 0.75);
+  padding: 30px 50px;
+  border-radius: 16px;
+  border: 4px solid #f1c40f;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px); /* Dá um efeito de desfoque no fundo */
+}
+
+.victory-panel h1 {
+  margin: 0 0 10px 0;
+  font-size: 2.2rem; /* Ajustado para caber melhor o texto longo */
+  color: #f1c40f;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 3px 3px 0px #e67e22, 0 0 20px rgba(241, 196, 15, 0.5);
+}
+
+.victory-panel p {
+  color: white;
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.victory-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* Nome da imagem atualizado conforme você enviou */
+  background-image: url('./assets/telaVitória.png');
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  animation: fadeIn 1.5s ease-in;
+}
+
+.victory-panel {
+  /* Diminuí a opacidade de 0.65 para 0.35 para ficar bem mais transparente */
+  background-color: rgba(0, 0, 0, 0.35); 
+  padding: 25px 40px;
+  border-radius: 16px;
+  border: 4px solid #f1c40f;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  
+  /* Diminuí o desfoque de 3px para 1px para a arte de trás ficar mais nítida */
+  backdrop-filter: blur(1px); 
+  
+  margin-top: -120px;
+}
+
+.victory-panel h1 {
+  margin: 0 0 10px 0;
+  font-size: 2.2rem;
+  color: #f1c40f;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 3px 3px 0px #e67e22, 0 0 20px rgba(241, 196, 15, 0.5);
+}
+
+.victory-panel p {
+  color: white;
+  font-size: 1.2rem;
+  margin-bottom: 20px;
 }
