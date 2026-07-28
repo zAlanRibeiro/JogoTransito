@@ -6,7 +6,7 @@ import bonecoAndando3 from '../../../assets/bonecoAndando3.png';
 
 const cicloDeCaminhada = [bonecoAndando1, bonecoAndando2, bonecoAndando3, bonecoAndando2];
 
-export default function Pedestrian({ isWalking, x, y = 0 }) {
+export default function Pedestrian({ isWalking, isRespawning = false, x, y = 0, zIndex = 80, registerRef }) {
   const [frameIndex, setFrameIndex] = useState(0);
 
   useEffect(() => {
@@ -24,14 +24,15 @@ export default function Pedestrian({ isWalking, x, y = 0 }) {
   const imagemAtual = isWalking ? cicloDeCaminhada[frameIndex] : bonecoParado;
 
   return (
-    <div 
-      className="pedestrian" 
-      style={{ 
+    <div
+      className={`pedestrian ${isRespawning ? 'respawning' : ''}`}
+      ref={registerRef}
+      style={{
         bottom: `${20 + y}px`, // 20px de folga na calçada inicial + progresso real no tabuleiro
         left: `${x}px`, // Move livremente para os lados com A e D!
         transform: 'translateX(-50%)',
         position: 'absolute',
-        zIndex: 80
+        zIndex
       }}
     >
       {/* 👇 Alterado o width de 40px para 28px para deixar o boneco menor e mais proporcional */}

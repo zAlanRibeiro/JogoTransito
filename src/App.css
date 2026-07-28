@@ -12,6 +12,13 @@
   --nt-caution-dark: #d4ac0d;
 }
 
+/* A margem padrão do body (8px em todo navegador) empurrava o
+   .app-container de 100vw pra fora da viewport, criando uma barra de
+   scroll horizontal e desperdiçando espaço útil de tela. */
+body {
+  margin: 0;
+}
+
 /* Resets e Container Principal */
 .nit-menu-container {
   position: absolute;
@@ -19,7 +26,7 @@
   left: 0;
   width: 600px;
   height: 400px;
-  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); /* Azul corporativo moderno */
+  background: linear-gradient(135deg, var(--nt-navy), #142a52 60%, #0c1c3d);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -31,16 +38,17 @@
 .nit-menu-card {
   width: 90%;
   height: 90%;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.97);
   border-radius: 10px;
-  padding: 20px 20px 30px 20px;
+  border-top: 5px solid var(--nt-orange);
+  padding: 16px 20px 22px 20px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.4);
   box-sizing: border-box;
   position: relative;
   display: grid;
-  grid-template-columns: 1.6fr 1.1fr 1.3fr; 
+  grid-template-columns: 1.6fr 1.1fr 1.0fr;
   grid-template-rows: auto 1fr;
-  gap: 15px 20px;
+  gap: 10px 20px;
 }
 
 /* Assinatura inserida via CSS */
@@ -58,7 +66,124 @@
 }
 
 .nit-content {
-  display: contents; 
+  display: contents;
+}
+
+/* --- BOTÃO DE COMANDOS: fora do grid, canto superior direito --- */
+.nit-comandos-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(30, 60, 114, 0.08);
+  border: 1px solid var(--nt-navy);
+  color: var(--nt-navy);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  z-index: 5;
+}
+
+.nit-comandos-btn:hover {
+  background: rgba(30, 60, 114, 0.15);
+}
+
+.nit-comandos-lista {
+  text-align: left;
+  margin-bottom: 15px;
+}
+
+.nit-comandos-lista h4 {
+  margin: 14px 0 6px 0;
+  font-size: 12px;
+  color: var(--nt-navy);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nit-comandos-lista h4:first-child {
+  margin-top: 0;
+}
+
+/* Seletor duplo (.modal-content.X) porque .modal-content é declarado mais
+   abaixo no arquivo: com a mesma especificidade, a regra posterior venceria
+   e o width/max-width daqui seria ignorado. */
+.modal-content.nit-comandos-modal {
+  width: 94%;
+  max-width: 560px;
+  padding: 22px 20px;
+}
+
+/* Teclado e toque lado a lado: aproveita a largura da arena widescreen e
+   evita que a lista fique alta demais e precise de scroll. */
+.nit-comandos-colunas {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.nit-comandos-colunas .nit-comandos-lista {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.nit-comando-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  font-size: 13px;
+  color: #444;
+}
+
+.nit-comando-linha:not(:last-child) {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.nit-tecla-grupo {
+  display: flex;
+  gap: 4px;
+}
+
+.nit-tecla {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #f4f6f8;
+  border: 1px solid #d8dee6;
+  border-bottom: 3px solid #c2cad4;
+  color: var(--nt-navy);
+  font-family: 'Baloo 2', 'Segoe UI', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.nit-tecla--larga {
+  min-width: 38px;
+  font-size: 11px;
+}
+
+.nit-tecla--destaque {
+  background: #fff3e6;
+  border-color: #ffcb8f;
+  border-bottom-color: var(--nt-orange);
+  color: var(--nt-orange-dark);
+}
+
+.nit-tecla-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  font-size: 15px;
+  flex-shrink: 0;
 }
 
 /* --- TÍTULO: Canto Superior Esquerdo --- */
@@ -76,7 +201,7 @@
 }
 
 .nit-badge {
-  background-color: #ff7b00;
+  background: linear-gradient(135deg, var(--nt-orange), var(--nt-orange-dark));
   color: white;
   font-size: 9px;
   font-weight: bold;
@@ -85,22 +210,31 @@
   text-transform: uppercase;
   white-space: nowrap;
   display: inline-block;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
 }
 
 .nit-header h1 {
   margin: 0;
   font-size: 20px;
-  color: #1e3c72;
+  font-family: 'Baloo 2', 'Segoe UI', sans-serif;
+  color: var(--nt-navy);
   line-height: 1.1;
 }
 
 .nit-header p {
-  margin: 4px 0 0 0;
+  margin: 3px 0 0 0;
   font-size: 11px;
   color: #666;
   font-weight: bold;
   letter-spacing: 1px;
+}
+
+.nit-veiculos-aviso {
+  margin-top: 4px;
+  font-size: 9px;
+  color: #888;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* --- BOTÃO INICIAR: Área Amarela (Centro Superior) --- */
@@ -109,11 +243,11 @@
   grid-row: 1 / 2;
   align-self: center;
   justify-self: stretch;
-  background: linear-gradient(135deg, #ff7b00, #ff5500);
+  background: linear-gradient(135deg, var(--nt-orange), #ff5500);
   color: white;
   border: none;
-  padding: 12px 10px;
-  font-size: 14px;
+  padding: 14px 10px;
+  font-size: 15px;
   font-weight: bold;
   border-radius: 8px;
   cursor: pointer;
@@ -135,17 +269,19 @@
   grid-column: 1 / 3;
   grid-row: 2 / 3;
   background: #f4f6f8;
-  padding: 12px 15px;
+  padding: 10px 14px;
   border-radius: 8px;
-  border-top: 4px solid #ff7b00;
+  border-top: 4px solid var(--nt-navy);
   display: flex;
   flex-direction: column;
   justify-content: center;
+  margin-bottom: 6px;
+  overflow: hidden;
 }
 
 .nit-instructions h3 {
-  margin: 0 0 10px 0;
-  font-size: 13px;
+  margin: 0 0 6px 0;
+  font-size: 12px;
   color: #333;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -153,28 +289,28 @@
 
 .nit-instructions ul {
   margin: 0;
-  padding: 0; 
-  list-style: none; 
+  padding: 0;
+  list-style: none;
   display: grid;
-  grid-template-columns: 1fr 1fr; 
-  gap: 10px 15px;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
 }
 
 .nit-instructions li {
   background: #ffffff;
-  padding: 8px 12px;
+  padding: 7px 11px;
   border-radius: 6px;
-  border-left: 3px solid #1e3c72; 
-  box-shadow: 0 2px 5px rgba(0,0,0,0.04); 
-  font-size: 11px;
+  border-left: 3px solid var(--nt-navy);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+  font-size: 10.5px;
   color: #444;
-  line-height: 1.4;
+  line-height: 1.35;
   margin-bottom: 0;
 }
 
 .nit-instructions li strong {
-  color: #1e3c72;
-  display: block; 
+  color: var(--nt-navy);
+  display: block;
   margin-bottom: 2px;
 }
 
@@ -199,23 +335,28 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100vw;
   height: 100vh;
-  background-color: #87CEEB; 
+  height: 100dvh;
+  background-color: #87CEEB;
   margin: 0;
   text-align: center;
+  overflow: hidden;
 }
 
-/* --- 1. A ARENA E O CENÁRIO DE FUNDO --- */
+/* --- 1. A ARENA E O CENÁRIO DE FUNDO ---
+   Tamanho interno fixo (600x400) para manter o sistema de coordenadas do
+   jogo; o fator de escala real é calculado em runtime (useResponsiveScale)
+   para caber em qualquer tela, do celular ao desktop. */
 .game-arena {
   position: relative;
   width: 600px;
   height: 400px;
-  margin: 100px auto; 
+  flex-shrink: 0;
   overflow: hidden;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   background-color: #FFFF;
-  transform: scale(1.4); 
   transform-origin: center center;
 }
 
@@ -236,6 +377,11 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
+  /* Contexto de empilhamento próprio: dentro da cena os elementos usam
+     z-index calculado pela profundidade (podendo passar de 1000), e este
+     z-index: 1 garante que nada disso suba por cima do HUD (90) ou dos
+     modais (100+), que são irmãos da cena. */
+  z-index: 1;
 }
 
 .segment {
@@ -246,6 +392,10 @@
   background-repeat: repeat-x;
   background-position: center;
   background-size: auto 100%;
+  /* Pixel art nítida em qualquer escala — sem isso, aumentar o maxScale da
+     arena (useResponsiveScale) deixaria essas texturas borradas, já que o
+     navegador interpola a imagem ao ampliar. */
+  image-rendering: pixelated;
 }
 
 .segment.calcada {
@@ -262,12 +412,13 @@
   width: 110px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: white; 
+  background-color: white;
   background-image: url('./assets/faixa.png');
-  background-repeat: repeat-y; 
+  background-repeat: repeat-y;
   background-size: 100% auto;
   z-index: 5;
   pointer-events: none;
+  image-rendering: pixelated;
 }
 .crosswalk .stripe { display: none; }
 
@@ -314,7 +465,12 @@
 
 .car-image {
   width: 100px;
-  transform: rotate(-90deg); 
+  transform: rotate(-90deg);
+  /* Sprite pixel art pequeno (59x70 / 52x70) esticado ~1.7x e depois
+     escalado de novo pela arena — sem isso o navegador borra os pixels
+     ao interpolar. */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 @keyframes drive {
@@ -328,7 +484,33 @@
   transform: translateX(-50%);
   width: 28px;
   height: 42px;
-  z-index: 20; 
+  z-index: 20;
+}
+
+/* Todo sprite dentro da cena é pixel art e precisa continuar nítido quando
+   a arena é ampliada (pedestre, semáforo, guarda, decoração da calçada). */
+.scene img,
+.traffic-light-container img {
+  image-rendering: pixelated;
+}
+
+/* Perdeu uma vida: o boneco volta pra calçada piscando, sinalizando a
+   janela em que ele está imóvel e não pode ser atingido de novo.
+   A duração casa com DURACAO_RESPAWN_MS em usePlayerMovement.js. */
+.pedestrian.respawning {
+  animation: respawnPiscar 1.4s ease-in-out;
+}
+
+@keyframes respawnPiscar {
+  0%   { opacity: 1; }
+  12%  { opacity: 0; }
+  25%  { opacity: 1; }
+  37%  { opacity: 0; }
+  50%  { opacity: 1; }
+  62%  { opacity: 0; }
+  75%  { opacity: 1; }
+  87%  { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 /* --- HUD --- */
@@ -343,6 +525,9 @@
   border-radius: 14px;
   box-shadow: 0 3px 10px rgba(0,0,0,0.2);
   border: 2px solid var(--nt-navy);
+  /* Faixa laranja no topo — mesma dupla laranja + azul-marinho da marca
+     NITTRANS (o "Nit" laranja sobre o "trans" azul-marinho na logo). */
+  border-top: 4px solid var(--nt-orange);
   overflow: hidden;
 }
 
@@ -443,23 +628,45 @@
 }
 
 /* --- Mensagem de Feedback Flutuante --- */
+/* Duas gravidades: "grave" (custou vida) fica maior, mais vermelho e treme
+   na entrada; "leve" (só custou pontos) é mais discreto, em tom âmbar —
+   assim o jogador reconhece a severidade do erro sem precisar ler o texto. */
 .feedback-banner {
   position: absolute;
   top: 70px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(231, 76, 60, 0.9);
-  color: white;
   padding: 8px 20px;
   border-radius: 8px;
   font-weight: bold;
-  z-index: 40;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  animation: fadeInOut 2s ease-in-out;
+  /* Acima do poste do semáforo, cujo z-index dinâmico (GameArena.jsx) chega
+     a 85 dependendo da posição na cena — sem isso o aviso ficava escondido
+     atrás do poste sempre que os dois se sobrepunham na tela. */
+  z-index: 95;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  animation: fadeInOut 2.2s ease-in-out;
   display: flex;
   align-items: center;
-  gap: 7px;
-  white-space: nowrap;
+  gap: 8px;
+  max-width: min(480px, 92%);
+  text-align: left;
+}
+
+.feedback-banner--grave {
+  background: linear-gradient(135deg, var(--nt-danger), var(--nt-danger-dark));
+  color: white;
+  font-size: 1rem;
+  padding: 10px 22px;
+  border: 2px solid rgba(255,255,255,0.5);
+  animation-name: fadeInOutGrave;
+  animation-duration: 2.8s;
+}
+
+.feedback-banner--leve {
+  background: linear-gradient(135deg, var(--nt-caution), var(--nt-caution-dark));
+  color: #3a2a00;
+  font-size: 0.85rem;
+  animation-duration: 2.2s;
 }
 
 .feedback-icon {
@@ -471,6 +678,110 @@
   20% { opacity: 1; transform: translate(-50%, 0); }
   80% { opacity: 1; transform: translate(-50%, 0); }
   100% { opacity: 0; transform: translate(-50%, -10px); }
+}
+
+@keyframes fadeInOutGrave {
+  0% { opacity: 0; transform: translate(-50%, -10px) scale(0.9); }
+  10% { opacity: 1; transform: translate(-50%, 0) scale(1.05); }
+  16% { transform: translate(-50%, 0) scale(1); }
+  85% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -10px) scale(0.95); }
+}
+
+/* --- Badge de contagem de infrações no HUD --- */
+.infracoes-board {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: #fff8e6;
+  color: #8a6d00;
+  border-left: 2px solid #eef0f4;
+}
+
+/* --- Resumo de infrações no modal de Fim de Jogo --- */
+.infracoes-resumo {
+  text-align: left;
+  background: #f4f6f8;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 0;
+}
+
+.infracoes-resumo h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px 0;
+  font-size: 0.8rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.infracoes-resumo ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.infracoes-resumo li {
+  font-size: 0.85rem;
+  color: #444;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.infracoes-resumo li strong {
+  color: var(--nt-danger);
+}
+
+.infracoes-grupo {
+  margin-top: 10px;
+}
+
+.infracoes-grupo:first-of-type {
+  margin-top: 0;
+}
+
+.infracoes-grupo-titulo {
+  margin: 0 0 5px 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.infracoes-grupo--leve .infracoes-grupo-titulo {
+  color: #8a6d00;
+}
+
+.infracoes-grupo--grave .infracoes-grupo-titulo {
+  color: var(--nt-danger-dark);
+}
+
+.infracoes-grupo ul {
+  padding-left: 10px;
+  border-left: 3px solid #ddd;
+}
+
+.infracoes-grupo--leve ul {
+  border-left-color: var(--nt-caution);
+}
+
+.infracoes-grupo--grave ul {
+  border-left-color: var(--nt-danger);
+}
+
+.infracoes-grupo li {
+  font-size: 0.78rem;
 }
 
 /* --- Feedback Modal (Derrota) --- */
@@ -489,46 +800,243 @@
 
 .modal-content {
   background-color: white;
-  padding: 30px;
-  border-radius: 12px;
-  width: 80%;
-  max-width: 300px;
+  padding: 28px 26px;
+  border-radius: 14px;
+  /* Sem border-box o padding soma à largura em % e o modal estoura a arena. */
+  box-sizing: border-box;
+  width: 84%;
+  max-width: 320px;
+  max-height: 94%;
+  overflow-y: auto;
   text-align: center;
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
   animation: popIn 0.3s ease-out;
+  /* Scrollbar fina e discreta em vez da barra cinza padrão do navegador —
+     Firefox (scrollbar-width/color) e Chrome/Edge (::-webkit-scrollbar). */
+  scrollbar-width: thin;
+  scrollbar-color: var(--nt-orange) #f0f0f0;
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 7px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: #f4f6f8;
+  border-radius: 8px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: var(--nt-orange);
+  border-radius: 8px;
 }
 
 .modal-content.error {
-  border-top: 8px solid #e74c3c;
+  border-top: 8px solid var(--nt-danger);
 }
 
 .modal-content h3 {
   margin-top: 0;
-  color: #333;
+  color: var(--nt-navy);
+  font-family: 'Baloo 2', 'Segoe UI', sans-serif;
   font-size: 1.5rem;
 }
 
 .modal-content p {
   color: #666;
-  font-size: 1rem;
+  font-size: 0.9rem;
   line-height: 1.4;
-  margin-bottom: 20px;
+  margin: 0 0 16px 0;
+}
+
+/* A arena é widescreen (600x400): com o resumo de infrações, o modal vira
+   duas colunas pra caber na altura sem scroll e aproveitar a largura. */
+.nit-gameover--com-resumo {
+  width: 94%;
+  max-width: 560px;
+  display: flex;
+  gap: 16px;
+  text-align: left;
+  padding: 20px;
+}
+
+.nit-gameover--com-resumo .nit-gameover-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.nit-gameover--com-resumo h3,
+.nit-gameover--com-resumo p {
+  text-align: center;
+}
+
+.nit-gameover--com-resumo .modal-btn {
+  width: 100%;
+  margin-top: 14px;
+}
+
+.nit-gameover-icone {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 6px auto;
+  border-radius: 50%;
+  background: #fdeceb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nit-stats-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.nit-stat-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  background: #fff6ec;
+  border: 1px solid #ffe1bf;
+}
+
+.nit-stat-card--recorde {
+  background: #f2f5fa;
+  border-color: #dbe3ef;
+}
+
+.nit-stat-valor {
+  font-family: 'Baloo 2', 'Segoe UI', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--nt-navy);
+  line-height: 1.1;
+}
+
+.nit-stat-label {
+  font-size: 0.68rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 700;
 }
 
 .modal-btn {
-  background-color: #3498db;
+  background: linear-gradient(135deg, var(--nt-orange), var(--nt-orange-dark));
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: 11px 20px;
   font-size: 1rem;
   border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
-  transition: background-color 0.2s;
+  transition: transform 0.1s, box-shadow 0.2s;
+  box-shadow: 0 4px 10px rgba(255, 123, 0, 0.35);
 }
 
 .modal-btn:hover {
-  background-color: #2980b9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(255, 123, 0, 0.45);
+}
+
+.nit-btn-com-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.nit-btn-perigo {
+  background: linear-gradient(135deg, var(--nt-danger), var(--nt-danger-dark));
+  box-shadow: 0 4px 10px rgba(231, 76, 60, 0.35);
+}
+
+/* --- Menu de pausa: mesma linguagem visual do modal de fim de jogo
+   (badge circular no topo + cards de status + botões empilhados). --- */
+.nit-pausa {
+  border-top: 8px solid var(--nt-orange);
+  padding: 16px 22px 18px 22px;
+}
+
+.nit-pausa h3 {
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+}
+
+.nit-pausa-icone {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 6px auto;
+  border-radius: 50%;
+  background: #fff3e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nit-pausa .nit-stats-row {
+  margin-bottom: 12px;
+}
+
+.nit-pausa .nit-stat-card {
+  padding: 6px 8px;
+}
+
+/* Os corações ocupam o lugar do número no card de status. */
+.nit-pausa-vidas {
+  display: flex;
+  gap: 2px;
+  height: 26px;
+  align-items: center;
+}
+
+.nit-pausa-botoes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nit-btn-secundario {
+  background: #f4f6f8;
+  color: var(--nt-navy);
+  border: 1px solid #d8dee6;
+  box-shadow: none;
+  font-size: 0.9rem;
+  padding: 9px 20px;
+}
+
+.nit-btn-secundario:hover {
+  background: #e9edf3;
+  box-shadow: none;
+  transform: none;
+}
+
+.nit-pausa-dica {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0 0 0 !important;
+  font-size: 0.72rem !important;
+  color: #999 !important;
+}
+
+.nit-pausa-dica .nit-tecla {
+  height: 20px;
+  min-width: 30px;
+  font-size: 10px;
+  border-bottom-width: 2px;
+}
+
+/* Congela os veículos enquanto o jogo está pausado: a animação CSS continua
+   avançando em segundo plano, então sem isto os carros "teleportariam" na
+   volta. */
+.game-arena.pausado .vehicle {
+  animation-play-state: paused !important;
 }
 
 @keyframes popIn {
@@ -560,52 +1068,6 @@
   }
 }
 
-/* ==================================================== */
-/* --- TELA DE VITÓRIA COM A IMAGEM EM PIXEL ART --- */
-/* ==================================================== */
-.victory-screen {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  /* Coloque a imagem na pasta correta ou ajuste o caminho abaixo */
-  background-image: url('./assets/95bafe7a5a7149c6bc2d0f9002b02bef~tplv-tnf8g33v4j-watermark-v2_MzExMTkyMzU5MTcy.jpg');
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 100; /* Fica por cima de tudo no jogo */
-  animation: fadeIn 1.5s ease-in;
-}
-
-.victory-panel {
-  background-color: rgba(0, 0, 0, 0.75);
-  padding: 30px 50px;
-  border-radius: 16px;
-  border: 4px solid #f1c40f;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px); /* Dá um efeito de desfoque no fundo */
-}
-
-.victory-panel h1 {
-  margin: 0 0 10px 0;
-  font-size: 2.2rem; /* Ajustado para caber melhor o texto longo */
-  color: #f1c40f;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  text-shadow: 3px 3px 0px #e67e22, 0 0 20px rgba(241, 196, 15, 0.5);
-}
-
-.victory-panel p {
-  color: white;
-  font-size: 1.2rem;
-  margin-bottom: 20px;
-}
-
 @keyframes fadeIn {
   0% { opacity: 0; }
   100% { opacity: 1; }
@@ -617,8 +1079,10 @@
   left: 0;
   width: 100%;
   height: 100%;
-  /* Nome da imagem atualizado conforme você enviou */
-  background-image: url('./assets/telaVitória.png');
+  /* WebP no lugar do PNG de 2,3 MB: mesma arte, ~87% mais leve. Nome sem
+     acento porque arquivo acentuado em URL dá problema de encoding em
+     alguns servidores. */
+  background-image: url('./assets/telaVitoria.webp');
   background-size: cover;
   background-position: center;
   display: flex;
