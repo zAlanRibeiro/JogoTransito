@@ -130,6 +130,31 @@ test('chamar o guarda dá o bônus anunciado no botão e não repete na mesma fa
   expect(await lerPontos(page)).toBe(antes + bonusAnunciado);
 });
 
+test('as setas do teclado movem igual ao WASD', async ({ page }) => {
+  await iniciarPartida(page);
+  await esperarSinalAberto(page);
+  await liberarCaminho(page);
+
+  // Frente: seta para cima faz o mesmo que W.
+  const yInicial = await lerPosicaoY(page);
+  await andar(page, 'ArrowUp', 500);
+  const yDepoisDaSeta = await lerPosicaoY(page);
+  expect(yDepoisDaSeta).toBeGreaterThan(yInicial);
+
+  // Lados: as setas esquerda e direita movem em sentidos opostos.
+  const xDepoisDaEsquerda = await page.evaluate(() =>
+    document.querySelector('.pedestrian').getBoundingClientRect().left
+  );
+  await andar(page, 'ArrowRight', 400);
+  const xDepoisDaDireita = await page.evaluate(() =>
+    document.querySelector('.pedestrian').getBoundingClientRect().left
+  );
+  expect(xDepoisDaDireita).toBeGreaterThan(xDepoisDaEsquerda);
+
+  // A página não pode rolar com as setas, senão o cenário pula.
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+});
+
 test('Esc pausa o jogo e congela semáforo e jogador', async ({ page }) => {
   await iniciarPartida(page);
   await page.waitForTimeout(300);

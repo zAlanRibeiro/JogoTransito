@@ -9,6 +9,21 @@ const REFERENCE_SCALE = 1.4;
 // seguinte (ainda encostado no carro) e perdia várias vidas de uma vez.
 export const DURACAO_RESPAWN_MS = 1400;
 
+// WASD e as setas fazem a mesma coisa: quem não tem costume de jogar no
+// computador procura as setas primeiro. Um Map (e não um objeto) porque a
+// chave vem de e.key, que pode ser qualquer string — inclusive nomes de
+// propriedades herdadas de Object, que num objeto comum dariam acerto falso.
+const TECLAS_DE_MOVIMENTO = new Map([
+  ['w', 'frente'],
+  ['arrowup', 'frente'],
+  ['s', 'tras'],
+  ['arrowdown', 'tras'],
+  ['a', 'esquerda'],
+  ['arrowleft', 'esquerda'],
+  ['d', 'direita'],
+  ['arrowright', 'direita'],
+]);
+
 export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife, isGameOver, playerElRef, vehicleElsRef, scale = 1, isTouchLeft = false, isTouchRight = false) {
   const posRef = useRef({ x: 300, y: 0 });
   const [position, setPosition] = useState(posRef.current);
@@ -43,17 +58,20 @@ export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife
   }, []);
 
   useEffect(() => {
-    const keys = { w: false, a: false, s: false, d: false };
+    const acoes = { frente: false, tras: false, esquerda: false, direita: false };
     let animationFrame;
 
-    const handleKeyDown = (e) => {
-      const key = e.key.toLowerCase();
-      if (keys.hasOwnProperty(key)) keys[key] = true;
+    const atualizarAcao = (e, pressionada) => {
+      const acao = TECLAS_DE_MOVIMENTO.get(e.key.toLowerCase());
+      if (!acao) return;
+      acoes[acao] = pressionada;
+      // As setas rolam a página por padrão; sem isto o cenário pularia
+      // enquanto o jogador anda.
+      if (e.key.startsWith('Arrow')) e.preventDefault();
     };
-    const handleKeyUp = (e) => {
-      const key = e.key.toLowerCase();
-      if (keys.hasOwnProperty(key)) keys[key] = false;
-    };
+
+    const handleKeyDown = (e) => atualizarAcao(e, true);
+    const handleKeyUp = (e) => atualizarAcao(e, false);
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -83,7 +101,7 @@ export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife
       let dy = 0;
       const speed = 4;
 
-      const querAndarFrente = keys.w || isTouchWalking;
+      const querAndarFrente = acoes.frente || isTouchWalking;
       const currentY = posRef.current.y;
 
       if (querAndarFrente) {
@@ -114,9 +132,9 @@ export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife
         }
       }
 
-      if (keys.s) dy = -speed;
-      if (keys.a || isTouchLeft) dx = -speed;
-      if (keys.d || isTouchRight) dx = speed;
+      if (acoes.tras) dy = -speed;
+      if (acoes.esquerda || isTouchLeft) dx = -speed;
+      if (acoes.direita || isTouchRight) dx = speed;
 
       let nextX = Math.max(30, Math.min(570, posRef.current.x + dx));
 
@@ -180,7 +198,8 @@ export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife
         return;
       }
 
-      const estaMovendo = querAndarFrente || keys.s || keys.a || keys.d || isTouchLeft || isTouchRight;
+      const estaMovendo =
+        querAndarFrente || acoes.tras || acoes.esquerda || acoes.direita || isTouchLeft || isTouchRight;
 
       if (estaMovendo) {
         posRef.current = { x: nextX, y: nextY };
