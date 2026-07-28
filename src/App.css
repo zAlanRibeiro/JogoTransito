@@ -120,7 +120,7 @@ body {
 .nit-comandos-colunas {
   display: flex;
   gap: 18px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .nit-comandos-colunas .nit-comandos-lista {
@@ -129,12 +129,19 @@ body {
   margin-bottom: 0;
 }
 
+/* A coluna do teclado carrega até 4 chips por linha; a de toque tem textos
+   curtos e sobra espaço. Sem esta divisão desigual o rótulo "Mover para os
+   lados" quebrava em três linhas e empurrava o botão para fora do modal. */
+.nit-comandos-colunas .nit-comandos-lista:first-child {
+  flex: 1.4;
+}
+
 .nit-comando-linha {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 4px;
-  font-size: 13px;
+  padding: 4px;
+  font-size: 12.5px;
   color: #444;
 }
 

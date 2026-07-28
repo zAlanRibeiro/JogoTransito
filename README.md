@@ -40,9 +40,9 @@ docker compose up
 
 | Tecla | Ação |
 | --- | --- |
-| `W` | Andar para frente |
-| `S` | Andar para trás (só dentro da cena atual) |
-| `A` / `D` | Mover para os lados |
+| `W` ou `↑` | Andar para frente |
+| `S` ou `↓` | Andar para trás (só dentro da cena atual) |
+| `A` `D` ou `←` `→` | Mover para os lados |
 | `E` | Chamar o guarda |
 | `Esc` | Pausar |
 

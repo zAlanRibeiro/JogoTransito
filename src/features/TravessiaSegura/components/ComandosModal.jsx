@@ -14,17 +14,25 @@ export default function ComandosModal({ onClose, zIndex }) {
           <div className="nit-comandos-lista">
             <h4>Teclado</h4>
             <div className="nit-comando-linha">
-              <span className="nit-tecla">W</span>
+              <span className="nit-tecla-grupo">
+                <span className="nit-tecla">W</span>
+                <span className="nit-tecla">↑</span>
+              </span>
               <span>Andar para frente</span>
             </div>
             <div className="nit-comando-linha">
-              <span className="nit-tecla">S</span>
+              <span className="nit-tecla-grupo">
+                <span className="nit-tecla">S</span>
+                <span className="nit-tecla">↓</span>
+              </span>
               <span>Andar para trás</span>
             </div>
             <div className="nit-comando-linha">
               <span className="nit-tecla-grupo">
                 <span className="nit-tecla">A</span>
                 <span className="nit-tecla">D</span>
+                <span className="nit-tecla">←</span>
+                <span className="nit-tecla">→</span>
               </span>
               <span>Mover para os lados</span>
             </div>
