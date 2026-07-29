@@ -7,6 +7,6 @@ export default defineConfig({
   test: {
     // Só os unitários: os arquivos em e2e/ são do Playwright e casariam com
     // o padrão padrão do Vitest, que tentaria executá-los sem navegador.
-    include: ['test/**/*.test.js'],
+    include: ['test/**/*.test.{js,jsx}'],
   },
 })

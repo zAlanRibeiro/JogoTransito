@@ -9,6 +9,8 @@ import useGuardSystem, { BONUS_CHAMAR_GUARDA } from './hooks/useGuardSystem';
 import useResponsiveScale from './hooks/useResponsiveScale';
 import MainMenu from './components/MainMenu';
 import ComandosModal from './components/ComandosModal';
+import ResumoInfracoes from './components/ResumoInfracoes';
+import { INFRACOES_ZERADAS, totalDeInfracoes } from './infracoes';
 import { StarIcon, HeartIcon, HourglassIcon, CheckIcon, WarningIcon, GraveWarningIcon, InfractionIcon, ArrowLeftIcon, ArrowRightIcon, TrophyIcon, RestartIcon, PauseIcon, PlayIcon, GamepadIcon, HomeIcon } from './components/HudIcons';
 import { SEGMENT_HEIGHT, mod3, segmentType, CROSSWALK_WIDTH, estaNaCalcadaComMargem } from './gameGrid';
 import { calcularDificuldade } from './difficulty';
@@ -71,21 +73,6 @@ function camadaDoSegmento(i, playerY) {
   return camadaPorProfundidade(segmentTop(i, playerY) + SEGMENT_HEIGHT / 2);
 }
 
-const LABELS_INFRACAO = {
-  carro: 'Atropelamentos',
-  sinalEntrada: 'Atravessou com o sinal fechado',
-  sinalAberto: 'Ficou preso na rua quando o sinal abriu',
-  faixa: 'Atravessou fora da faixa',
-  pontosZerados: 'Perdeu vida sem pontos pra descontar',
-};
-
-// Mesma divisão usada no banner de aviso (mostrarAviso): 'leve' só tira
-// pontos, 'grave' tira vida — usada pra agrupar o resumo do fim de jogo.
-const TIPOS_POR_GRAVIDADE = {
-  leve: ['sinalAberto', 'faixa'],
-  grave: ['carro', 'sinalEntrada', 'pontosZerados'],
-};
-
 export default function GameArena() {
   const arenaRef = useRef(null);
   const playerElRef = useRef(null);
@@ -101,6 +88,7 @@ export default function GameArena() {
   // pra ninguém voltar direto pra dentro do trânsito.
   const [pausado, setPausado] = useState(false);
   const [mostrarComandos, setMostrarComandos] = useState(false);
+  const [mostrarResumoFinal, setMostrarResumoFinal] = useState(false);
   const [isTouchWalking, setIsTouchWalking] = useState(false);
   const [isTouchLeft, setIsTouchLeft] = useState(false);
   const [isTouchRight, setIsTouchRight] = useState(false);
@@ -111,8 +99,7 @@ export default function GameArena() {
   // resumo mostrado no fim de jogo (reforço pedagógico: o jogador vê
   // quantas vezes e de que tipo errou, não só um aviso que passa rápido).
   const [aviso, setAviso] = useState(null); // { texto, gravidade: 'grave' | 'leve' } | null
-  const infracoesIniciais = { carro: 0, sinalEntrada: 0, sinalAberto: 0, faixa: 0, pontosZerados: 0 };
-  const [infracoes, setInfracoes] = useState(infracoesIniciais);
+  const [infracoes, setInfracoes] = useState(INFRACOES_ZERADAS);
 
   // useCallback com deps vazias (mesmo padrão do handleLoseLife abaixo):
   // só chamam setters estáveis, então uma identidade fixa é segura e evita
@@ -233,9 +220,7 @@ export default function GameArena() {
   const scoreRef = useRef(score);
   scoreRef.current = score;
 
-  const totalInfracoes = Object.values(infracoes).reduce((soma, n) => soma + n, 0);
-  const totalPorGravidade = (gravidade) =>
-    TIPOS_POR_GRAVIDADE[gravidade].reduce((soma, tipo) => soma + infracoes[tipo], 0);
+  const totalInfracoes = totalDeInfracoes(infracoes);
 
   // Pausa assim que a aba deixa de estar visível. Não despausa sozinho: o
   // jogador retoma quando estiver pronto.
@@ -358,8 +343,9 @@ export default function GameArena() {
     setVidas(3);
     setPenalidade(0);
     setCreditedRawScore(0);
-    setInfracoes(infracoesIniciais);
+    setInfracoes(INFRACOES_ZERADAS);
     setPausado(false);
+    setMostrarResumoFinal(false);
     ultimoTipoSegmentoRef.current = 'calcada';
     saiuDaFaixaRef.current = false;
     resetPosition();
@@ -379,8 +365,9 @@ export default function GameArena() {
     setVidas(3);
     setPenalidade(0);
     setCreditedRawScore(0);
-    setInfracoes(infracoesIniciais);
+    setInfracoes(INFRACOES_ZERADAS);
     setPausado(false);
+    setMostrarResumoFinal(false);
     ultimoTipoSegmentoRef.current = 'calcada';
     saiuDaFaixaRef.current = false;
     resetPosition();
@@ -662,27 +649,7 @@ export default function GameArena() {
             </div>
 
             {totalInfracoes > 0 && (
-              <div className="nit-gameover-col infracoes-resumo">
-                <h4><InfractionIcon size={14} /> Resumo da travessia</h4>
-                {['leve', 'grave'].map((gravidade) => {
-                  const total = totalPorGravidade(gravidade);
-                  if (total === 0) return null;
-                  return (
-                    <div key={gravidade} className={`infracoes-grupo infracoes-grupo--${gravidade}`}>
-                      <p className="infracoes-grupo-titulo">
-                        {gravidade === 'leve' ? 'Leves (tiraram pontos)' : 'Pesadas (tiraram vida)'}: <strong>{total}x</strong>
-                      </p>
-                      <ul>
-                        {TIPOS_POR_GRAVIDADE[gravidade]
-                          .filter((tipo) => infracoes[tipo] > 0)
-                          .map((tipo) => (
-                            <li key={tipo}>{LABELS_INFRACAO[tipo]}: <strong>{infracoes[tipo]}x</strong></li>
-                          ))}
-                      </ul>
-                    </div>
-                  );
-                })}
-              </div>
+              <ResumoInfracoes infracoes={infracoes} className="nit-gameover-col" />
             )}
           </div>
         </div>
@@ -690,20 +657,36 @@ export default function GameArena() {
 
       {gameState === 'won' && (
         <div className="victory-screen" style={{ zIndex: 100 }}>
-          <div className="victory-panel">
-            <h1>Você Chegou à Praia!</h1>
-            <p>Parabéns por realizar a travessia com segurança!</p>
-            <h2 style={{ color: 'white', marginBottom: '25px' }}>Pontuação: {score}</h2>
-            
-            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-              <button className="modal-btn" onClick={continuePlaying}>
-                CONTINUAR JOGANDO
-              </button>
-              <button className="modal-btn nit-btn-perigo" onClick={goToMenu}>
-                VOLTAR AO MENU
+          {/* O relatório só entra quando o jogador decide encerrar: quem
+              escolhe continuar ainda está no meio da mesma partida, e as
+              infrações seguem sendo contadas. */}
+          {mostrarResumoFinal ? (
+            <div className="victory-panel victory-panel--resumo">
+              <h1>Missão cumprida!</h1>
+              <p className="nit-resumo-placar">
+                <StarIcon size={16} /> {score} pontos
+              </p>
+              <ResumoInfracoes infracoes={infracoes} />
+              <button className="modal-btn nit-btn-com-icone" onClick={goToMenu}>
+                <HomeIcon size={15} color="#ffffff" /> Voltar ao menu
               </button>
             </div>
-          </div>
+          ) : (
+            <div className="victory-panel">
+              <h1>Você Chegou à Praia!</h1>
+              <p>Parabéns por realizar a travessia com segurança!</p>
+              <h2 style={{ color: 'white', marginBottom: '25px' }}>Pontuação: {score}</h2>
+
+              <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                <button className="modal-btn" onClick={continuePlaying}>
+                  CONTINUAR JOGANDO
+                </button>
+                <button className="modal-btn nit-btn-perigo" onClick={() => setMostrarResumoFinal(true)}>
+                  ENCERRAR
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
