@@ -9,6 +9,7 @@ import {
   contarInfracoes,
   andar,
   liberarCaminho,
+  desviarDoVeiculo,
   pararVeiculoSobreAFaixa,
 } from './helpers.js';
 
@@ -98,7 +99,10 @@ test('desviar de carro que bloqueia a faixa não é punido', async ({ page }) =>
   await expect(page.getByText('Chamar Guarda')).toBeVisible();
 
   const pontosAntes = await lerPontos(page);
-  await andar(page, 'a', 500);
+  // Desvia pelo tamanho real do veículo, que é sorteado: um ônibus ocupa
+  // mais que o dobro da largura de um carro, e uma distância fixa esbarrava
+  // nele no meio da medição.
+  expect(await desviarDoVeiculo(page, 1)).toBe(true);
   await andar(page, 'w', 2200);
   await page.waitForTimeout(400);
 
@@ -112,6 +116,10 @@ test('chamar o guarda dá o bônus anunciado no botão e não repete na mesma fa
   // passou a dar 5 pontos.
   await iniciarPartida(page);
   await esperarSinalAberto(page);
+  // Limpa as outras faixas antes: quando o sinal fecha cada carro para onde
+  // estiver, e uma segunda faixa bloqueada é uma chamada legítima a mais —
+  // o teste mediria duas faixas achando que mediu uma.
+  await liberarCaminho(page);
   await pararVeiculoSobreAFaixa(page, 1);
 
   const botao = page.getByRole('button', { name: /Chamar Guarda/ });
@@ -128,6 +136,32 @@ test('chamar o guarda dá o bônus anunciado no botão e não repete na mesma fa
   await page.keyboard.press('e');
   await page.waitForTimeout(400);
   expect(await lerPontos(page)).toBe(antes + bonusAnunciado);
+});
+
+test('disparos em sequência não creditam o bônus do guarda duas vezes', async ({ page }) => {
+  // A checagem por estado só vale a partir do render seguinte; sem a trava
+  // síncrona, dois disparos rápidos enxergam a mesma faixa disponível e
+  // ambos creditam o bônus.
+  await iniciarPartida(page);
+  await esperarSinalAberto(page);
+  await liberarCaminho(page);
+  await pararVeiculoSobreAFaixa(page, 1);
+  await expect(page.getByRole('button', { name: /Chamar Guarda/ })).toBeVisible();
+
+  const antes = await lerPontos(page);
+  const rotulo = await page.getByRole('button', { name: /Chamar Guarda/ }).innerText();
+  const bonus = Number(rotulo.match(/\+(\d+)/)[1]);
+
+  // Disparados no MESMO tick: com page.keyboard.press o React alcança
+  // re-renderizar entre uma tecla e outra, e a corrida não acontece.
+  await page.evaluate(() => {
+    for (let i = 0; i < 3; i++) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'e' }));
+    }
+  });
+  await page.waitForTimeout(500);
+
+  expect(await lerPontos(page)).toBe(antes + bonus);
 });
 
 test('as setas do teclado movem igual ao WASD', async ({ page }) => {

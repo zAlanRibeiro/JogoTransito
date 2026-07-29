@@ -12,14 +12,18 @@ export async function iniciarPartida(page) {
   await page.locator('.scoreboard').waitFor();
 }
 
+// Os dois esperam pelo .signal-badge, e não pelo texto solto: a região viva
+// que anuncia o sinal para leitores de tela também contém "Espere", e um
+// seletor por texto casaria com os dois elementos.
+
 /** Espera o sinal abrir para o pedestre (rótulo "Atravesse"). */
 export async function esperarSinalAberto(page) {
-  await page.getByText('Atravesse').waitFor({ timeout: 20_000 });
+  await page.locator('.signal-badge', { hasText: 'Atravesse' }).waitFor({ timeout: 20_000 });
 }
 
 /** Espera o sinal fechado para o pedestre (rótulo "Espere"). */
 export async function esperarSinalFechado(page) {
-  await page.getByText('Espere').waitFor({ timeout: 20_000 });
+  await page.locator('.signal-badge', { hasText: 'Espere' }).waitFor({ timeout: 20_000 });
 }
 
 /**
@@ -71,6 +75,27 @@ export async function liberarCaminho(page) {
     });
   });
   await page.waitForTimeout(100);
+}
+
+/**
+ * Anda para o lado até o jogador sair da largura do veículo parado na faixa.
+ * A distância não pode ser fixa: o tipo do veículo é sorteado, e um ônibus
+ * ocupa mais que o dobro de um carro.
+ */
+export async function desviarDoVeiculo(page, faixa) {
+  for (let tentativa = 0; tentativa < 40; tentativa++) {
+    const livre = await page.evaluate((f) => {
+      const img = document.querySelector(`.car-container[data-lane-index="${f}"] .car-image`);
+      const jogador = document.querySelector('.pedestrian');
+      if (!img || !jogador) return false;
+      const v = img.getBoundingClientRect();
+      const p = jogador.getBoundingClientRect();
+      return p.right < v.left - 6 || p.left > v.right + 6;
+    }, faixa);
+    if (livre) return true;
+    await andar(page, 'a', 100);
+  }
+  return false;
 }
 
 /**

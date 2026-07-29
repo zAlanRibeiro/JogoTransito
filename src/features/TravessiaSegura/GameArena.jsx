@@ -468,6 +468,10 @@ export default function GameArena() {
           className={`signal-badge ${
             lightState === 'red' ? 'state-go' : lightState === 'yellow' ? 'state-caution' : 'state-wait'
           } ${timeLeft <= 2 ? 'urgent' : ''}`}
+          // O contador muda a cada segundo; se o leitor de tela seguisse
+          // este elemento, falaria sem parar. Quem anuncia é a região viva
+          // abaixo, que só muda quando o sinal muda.
+          aria-hidden="true"
         >
           <span className="signal-icon">
             {lightState === 'red' ? (
@@ -480,6 +484,16 @@ export default function GameArena() {
           </span>
           {lightState === 'red' ? 'Atravesse' : 'Espere'}: {timeLeft}s
         </div>
+      )}
+
+      {/* Estado do sinal para quem não enxerga a cor: o texto só muda na
+          troca de sinal, então é falado uma vez por mudança. */}
+      {gameState === 'playing' && (
+        <p className="sr-only" role="status" aria-live="assertive">
+          {lightState === 'red'
+            ? 'Sinal aberto para pedestres. Pode atravessar.'
+            : 'Sinal fechado para pedestres. Espere na calçada.'}
+        </p>
       )}
 
       {/* --- BOTÃO DE CHAMAR GUARDA --- */}
@@ -579,9 +593,9 @@ export default function GameArena() {
 
       {pausado && gameState === 'playing' && (
         <div className="modal-overlay" style={{ zIndex: 110 }} onPointerDown={(e) => e.stopPropagation()}>
-          <div className="modal-content nit-pausa">
-            <div className="nit-pausa-icone"><PauseIcon size={22} /></div>
-            <h3>Jogo pausado</h3>
+          <div className="modal-content nit-pausa" role="dialog" aria-modal="true" aria-labelledby="titulo-pausa">
+            <div className="nit-pausa-icone" aria-hidden="true"><PauseIcon size={22} /></div>
+            <h3 id="titulo-pausa">Jogo pausado</h3>
 
             <div className="nit-stats-row">
               <div className="nit-stat-card">
@@ -600,7 +614,7 @@ export default function GameArena() {
             </div>
 
             <div className="nit-pausa-botoes">
-              <button className="modal-btn nit-btn-com-icone" onClick={() => setPausado(false)}>
+              <button className="modal-btn nit-btn-com-icone" onClick={() => setPausado(false)} autoFocus>
                 <PlayIcon size={14} /> Continuar
               </button>
               <button className="modal-btn nit-btn-secundario nit-btn-com-icone" onClick={() => setMostrarComandos(true)}>
@@ -624,10 +638,15 @@ export default function GameArena() {
 
       {gameState === 'gameover' && (
         <div className="modal-overlay" style={{ zIndex: 100 }}>
-          <div className={`modal-content error nit-gameover ${totalInfracoes > 0 ? 'nit-gameover--com-resumo' : ''}`}>
+          <div
+            className={`modal-content error nit-gameover ${totalInfracoes > 0 ? 'nit-gameover--com-resumo' : ''}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="titulo-fim-de-jogo"
+          >
             <div className="nit-gameover-col">
-              <div className="nit-gameover-icone"><GraveWarningIcon size={28} color="#e74c3c" /></div>
-              <h3>Fim de Jogo!</h3>
+              <div className="nit-gameover-icone" aria-hidden="true"><GraveWarningIcon size={28} color="#e74c3c" /></div>
+              <h3 id="titulo-fim-de-jogo">Fim de Jogo!</h3>
               <p>Você não conseguiu atravessar com segurança.</p>
 
               <div className="nit-stats-row">
@@ -643,7 +662,7 @@ export default function GameArena() {
                 </div>
               </div>
 
-              <button className="modal-btn nit-btn-com-icone" onClick={restartGame}>
+              <button className="modal-btn nit-btn-com-icone" onClick={restartGame} autoFocus>
                 <RestartIcon size={15} /> Tentar Novamente
               </button>
             </div>

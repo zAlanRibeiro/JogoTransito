@@ -36,7 +36,7 @@ export default function Pedestrian({ isWalking, isRespawning = false, x, y = 0, 
       }}
     >
       {/* 👇 Alterado o width de 40px para 28px para deixar o boneco menor e mais proporcional */}
-      <img src={imagemAtual} alt="Pedestre" style={{ width: '28px' }} />
+      <img src={imagemAtual} alt="" style={{ width: '28px' }} />
     </div>
   );
 }

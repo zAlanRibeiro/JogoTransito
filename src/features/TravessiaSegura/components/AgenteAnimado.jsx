@@ -101,7 +101,7 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
   return (
     <img
       src={`/agente_${frame}.png`}
-      alt="Agente Multando"
+      alt=""
       style={{
         position: 'absolute',
         left: `${posicaoX}px`,
