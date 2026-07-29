@@ -748,7 +748,7 @@ export default function GameArena() {
                 pointerEvents: 'none'
               }}
             >
-              <SidewalkDecoration seed={i} />
+              <SidewalkDecoration />
             </div>
           ))}
 
