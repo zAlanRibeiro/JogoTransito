@@ -6,10 +6,13 @@ export default function ComandosModal({ onClose, zIndex }) {
     <div className="modal-overlay" style={zIndex ? { zIndex } : undefined} onClick={onClose}>
       <div
         className="modal-content nit-comandos-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-comandos"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <h3>🎮 Comandos</h3>
+        <h3 id="titulo-comandos">🎮 Comandos</h3>
         <div className="nit-comandos-colunas">
           <div className="nit-comandos-lista">
             <h4>Teclado</h4>
@@ -62,7 +65,8 @@ export default function ComandosModal({ onClose, zIndex }) {
             </div>
           </div>
         </div>
-        <button className="modal-btn" onClick={onClose}>
+        {/* Leva o foco do teclado para dentro do diálogo ao abrir. */}
+        <button className="modal-btn" onClick={onClose} autoFocus>
           Entendi
         </button>
       </div>

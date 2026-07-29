@@ -31,7 +31,7 @@ export default function SidewalkDecoration({ seed }) {
     >
       <img 
         src={itemAtual.src} 
-        alt="Decoração da Calçada" 
+        alt="" 
         style={{ 
           width: itemAtual.width, 
           height: itemAtual.height, 

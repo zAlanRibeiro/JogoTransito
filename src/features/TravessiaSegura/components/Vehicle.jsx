@@ -25,13 +25,13 @@ const CARRO = { tipo: 'carro', sprites: [carroVermelho, carroAmarelo], largura: 
 const MOTO = { tipo: 'moto', sprites: [motoImg], largura: 62, duracaoMultiplicador: 0.65, topOffset: -7, rotacao: 90 };
 const ONIBUS = { tipo: 'onibus', sprites: [onibusImg], largura: 130, duracaoMultiplicador: 1.6, topOffset: -102, rotacao: -90 };
 
+// Repetir entradas é o jeito simples de pesar o sorteio: 3 chances de
+// carro, 2 de moto, 1 de ônibus.
 const TIPOS_DE_VEICULO = [CARRO, CARRO, CARRO, MOTO, MOTO, ONIBUS];
 
-const ALT_POR_TIPO = {
-  carro: 'Carro passando',
-  moto: 'Moto passando',
-  onibus: 'Ônibus passando',
-};
+function sortearTipoDeVeiculo() {
+  return TIPOS_DE_VEICULO[Math.floor(Math.random() * TIPOS_DE_VEICULO.length)];
+}
 
 export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarro = 4 }) {
   // Tipo do veículo é sorteado uma vez, no mount, e gruda pro resto da vida
@@ -40,9 +40,13 @@ export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarr
   // no meio do caminho e reabriríamos o mesmo bug do "pulo dos carros" já
   // corrigido antes (mudar propriedades de uma animação CSS em andamento
   // faz o navegador recalcular a posição na hora).
-  const [tipoVeiculo] = useState(() => TIPOS_DE_VEICULO[Math.abs(seed) % TIPOS_DE_VEICULO.length]);
+  // Sorteado de verdade, e não derivado do índice da faixa: com
+  // `seed % 6` a sequência era sempre carro, carro, moto, ônibus,
+  // repetindo a cada duas travessias — o jogador decorava o trajeto e a
+  // variedade de veículos não mudava nada na prática.
+  const [tipoVeiculo] = useState(sortearTipoDeVeiculo);
   const [carroAtual, setCarroAtual] = useState(
-    () => tipoVeiculo.sprites[Math.abs(seed) % tipoVeiculo.sprites.length]
+    () => tipoVeiculo.sprites[Math.floor(Math.random() * tipoVeiculo.sprites.length)]
   );
   const isMoving = lightState !== 'red';
 
@@ -68,7 +72,7 @@ export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarr
       >
         <img
           src={carroAtual}
-          alt={ALT_POR_TIPO[tipoVeiculo.tipo]}
+          alt=""
           // O ref vai na própria img (o elemento que tem o rotate(-90deg)),
           // não no <div> pai: getBoundingClientRect() só reflete a rotação
           // no elemento em que ela foi aplicada. No pai, o retângulo fica

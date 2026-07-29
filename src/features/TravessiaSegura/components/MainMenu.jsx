@@ -27,7 +27,7 @@ export default function MainMenu({ onStartGame }) {
         <div className="nit-content">
           <div className="nit-agent-wrapper">
             {/* Imagem do guarda renderizada aqui */}
-            <img src={agenteImg} alt="Agente NitTrans" className="nit-agent-img" />
+            <img src={agenteImg} alt="" className="nit-agent-img" />
           </div>
 
           <div className="nit-instructions">

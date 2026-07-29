@@ -60,7 +60,7 @@ body {
   width: 100%;
   text-align: center;
   font-size: 10px;
-  color: #888;
+  color: #6b6b6b;
   font-weight: 600;
   letter-spacing: 0.5px;
 }
@@ -239,7 +239,7 @@ body {
 .nit-veiculos-aviso {
   margin-top: 4px;
   font-size: 9px;
-  color: #888;
+  color: #6b6b6b;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -335,6 +335,51 @@ body {
   max-width: 400px;
   height: auto;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+}
+
+/* Conteúdo só para leitor de tela: fica fora da vista mas continua no
+   fluxo de acessibilidade (display:none ou visibility:hidden o esconderiam
+   também do leitor). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Foco visível no teclado. O padrão do navegador some em alguns botões por
+   causa dos gradientes e sombras. */
+.modal-btn:focus-visible,
+.nit-start-btn:focus-visible,
+.nit-comandos-btn:focus-visible {
+  outline: 3px solid var(--nt-navy);
+  outline-offset: 2px;
+}
+
+/* Quem pede menos movimento no sistema não deveria levar piscadas e
+   pulsos. O movimento dos veículos NÃO entra aqui: ele é a jogabilidade,
+   não enfeite. O respawn troca a piscada por uma opacidade fixa, senão o
+   jogador perderia o aviso de que está invulnerável. */
+@media (prefers-reduced-motion: reduce) {
+  .scoreboard.bump,
+  .lives-board.shake,
+  .signal-badge.urgent,
+  .feedback-banner,
+  .modal-content,
+  .victory-screen {
+    animation: none !important;
+  }
+
+  .pedestrian.respawning {
+    animation: none !important;
+    opacity: 0.55;
+  }
 }
 
 .app-container {
@@ -967,7 +1012,7 @@ body {
 
 .nit-stat-label {
   font-size: 0.68rem;
-  color: #888;
+  color: #6b6b6b;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   font-weight: 700;
@@ -1070,7 +1115,7 @@ body {
   gap: 6px;
   margin: 8px 0 0 0 !important;
   font-size: 0.72rem !important;
-  color: #999 !important;
+  color: #6b6b6b !important;
 }
 
 .nit-pausa-dica .nit-tecla {

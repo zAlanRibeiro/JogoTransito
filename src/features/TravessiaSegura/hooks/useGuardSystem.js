@@ -35,6 +35,10 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
 
   const [faixasComCarroParado, setFaixasComCarroParado] = useState([]);
 
+  // Espelho síncrono de agentesChamados, usado por chamarGuarda para não
+  // depender do estado, que só chega no render seguinte.
+  const jaAtendidasRef = useRef(new Set());
+
   useEffect(() => {
     guardasAtivosRef.current = guardasAtivos;
   }, [guardasAtivos]);
@@ -42,10 +46,13 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
   // Descarta as faixas já atendidas que ficaram para trás. Devolver o
   // array original quando nada muda evita re-render a cada passo.
   useEffect(() => {
+    const limite = currentIndex - FAIXAS_ATRAS_A_MANTER;
     setAgentesChamados((prev) => {
-      const limite = currentIndex - FAIXAS_ATRAS_A_MANTER;
       const restantes = prev.filter((lane) => lane >= limite);
       return restantes.length === prev.length ? prev : restantes;
+    });
+    jaAtendidasRef.current.forEach((lane) => {
+      if (lane < limite) jaAtendidasRef.current.delete(lane);
     });
   }, [currentIndex]);
 
@@ -105,6 +112,14 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
 
   const chamarGuarda = () => {
     if (pistaValidaProxima === undefined) return;
+
+    // Trava síncrona, além da checagem por estado acima. `agentesChamados`
+    // só é atualizado no próximo render: dois disparos antes disso (tecla
+    // repetindo, um clique somado ao atalho) enxergariam o mesmo
+    // pistaValidaProxima e creditariam o bônus duas vezes pela mesma faixa.
+    if (jaAtendidasRef.current.has(pistaValidaProxima)) return;
+    jaAtendidasRef.current.add(pistaValidaProxima);
+
     onPenalidade((p) => p - BONUS_CHAMAR_GUARDA);
     setAgentesChamados((prev) => [...prev, pistaValidaProxima]);
     setGuardasAtivos((prev) => [...prev, pistaValidaProxima]);
@@ -115,6 +130,7 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
   };
 
   const resetGuardas = () => {
+    jaAtendidasRef.current.clear();
     setAgentesChamados([]);
     setGuardasAtivos([]);
     setFaixasComCarroParado([]);
