@@ -40,65 +40,102 @@ const CICLO_HOMEM = [
   ...paradoPor(2),
 ];
 
-// Alturas escolhidas por item; a largura sai da proporção real do arquivo
+// --- PEÇAS ---
+//
+// Alturas escolhidas por peça; a largura sai da proporção real do arquivo
 // para o sprite não esticar. Antes o banco era desenhado em 90x45 (2.0)
 // sendo que a arte é 71x49 (1.45), e o hidrante em 40x40 sendo 43x54.
 //
 // `vivo` é bicho ou gente: vira para qualquer lado e fica fora da linha exata
-// em que o mobiliário se apoia. `repetivel` é quem pode aparecer mais de uma
-// vez na mesma calçada — só o pombo, que anda em bando; cachorro e gato são
-// de alguém, e duas cópias da mesma pessoa na mesma quadra entregariam o
-// sorteio na hora.
-// `acompanhante` é quem não existe sozinho: quem espera o ônibus espera NO
-// ponto, então o homem é parte do abrigo, desenhado por cima e um pouco à
-// frente dele. Sem isso ele aparecia esperando ônibus no meio da quadra.
-const ELEMENTOS = [
-  { src: banco, altura: 40, proporcao: 71 / 49 },
-  { src: hidrante, altura: 44, proporcao: 43 / 54 },
-  { src: nitbike, altura: 73, proporcao: 88 / 72 },
-  {
-    src: pontoOnibus,
-    altura: 72,
-    proporcao: 86 / 55,
-    acompanhante: {
-      quadros: CICLO_HOMEM,
-      altura: 70,
-      proporcao: 29 / 74,
-      msPorQuadro: MS_DO_HOMEM,
-      // Encostado no montante direito do abrigo, dentro da largura dele. A
-      // base desce 4px: é o que faz ele ler como estando NA FRENTE do
-      // abrigo, e não dentro da parede.
-      deslocamentoX: 76,
-      deslocamentoY: 4,
-      // Sempre virado para a esquerda: é de lá que os veículos vêm (a
-      // animação `drive` corre da esquerda para a direita), então é para lá
-      // que olha quem espera o ônibus.
-      espelhado: true,
-    },
-  },
-  { quadros: CICLO_POMBO, altura: 20, proporcao: 89 / 82, vivo: true, repetivel: true },
-  { quadros: CICLO_CACHORRO, altura: 27, proporcao: 32 / 28, vivo: true, msPorQuadro: 130 },
-  { quadros: CICLO_GATO, altura: 26, proporcao: 28 / 33, vivo: true, msPorQuadro: 320 },
-].map(function comLargura(elemento) {
-  // Largura resolvida uma vez: o sorteio precisa dela para saber se o item
-  // cabe na vaga, e o render para desenhar.
+// em que o mobiliário se apoia.
+function comLargura(peca) {
   return {
-    ...elemento,
-    largura: Math.round(elemento.altura * elemento.proporcao),
-    ...(elemento.acompanhante ? { acompanhante: comLargura(elemento.acompanhante) } : {}),
+    ...peca,
+    largura: Math.round(peca.altura * peca.proporcao),
+    ...(peca.acompanhante ? { acompanhante: comLargura(peca.acompanhante) } : {}),
   };
+}
+
+const BANCO = comLargura({ src: banco, altura: 40, proporcao: 71 / 49 });
+const HIDRANTE = comLargura({ src: hidrante, altura: 44, proporcao: 43 / 54 });
+const NITBIKE = comLargura({ src: nitbike, altura: 73, proporcao: 88 / 72 });
+
+const PONTO_DE_ONIBUS = comLargura({
+  src: pontoOnibus,
+  altura: 72,
+  proporcao: 86 / 55,
+  // `acompanhante` é quem não existe sozinho: quem espera o ônibus espera NO
+  // ponto, então o homem é parte do abrigo, desenhado por cima e um pouco à
+  // frente dele. Sem isso ele aparecia esperando ônibus no meio da quadra.
+  acompanhante: {
+    quadros: CICLO_HOMEM,
+    altura: 70,
+    proporcao: 29 / 74,
+    msPorQuadro: MS_DO_HOMEM,
+    // Encostado no montante direito do abrigo, dentro da largura dele. A base
+    // desce 4px: é o que faz ele ler como estando NA FRENTE do abrigo, e não
+    // dentro da parede.
+    deslocamentoX: 76,
+    deslocamentoY: 4,
+    // Sempre virado para a esquerda: é de lá que os veículos vêm (a animação
+    // `drive` corre da esquerda para a direita), então é para lá que olha
+    // quem espera o ônibus.
+    espelhado: true,
+  },
 });
 
-// Os itens são centralizados na faixa da calçada. Sem compensar, um sprite
-// baixo (o pombo) flutuaria acima da base dos outros: empurra cada um para
-// baixo até todos apoiarem na mesma linha do chão. O valor é fixo de
-// propósito — se fosse o item mais alto, crescer o abrigo do ponto de ônibus
-// arrastaria a calçada inteira para baixo. Quem é mais alto que a referência
-// cresce para cima, que é como um abrigo se comporta.
+const POMBO = comLargura({ quadros: CICLO_POMBO, altura: 20, proporcao: 89 / 82, vivo: true });
+const CACHORRO = comLargura({ quadros: CICLO_CACHORRO, altura: 27, proporcao: 32 / 28, vivo: true, msPorQuadro: 130 });
+const GATO = comLargura({ quadros: CICLO_GATO, altura: 26, proporcao: 28 / 33, vivo: true, msPorQuadro: 320 });
+
+// --- CONJUNTOS ---
 //
-// Como a base fica em (metade do segmento + ALTURA_DE_APOIO/2), existe uma
-// altura máxima: acima dela o topo do sprite vaza do segmento e aparece por
-// cima do asfalto. É o teto do abrigo do ponto e da nitbike.
+// A vaga da calçada recebe um conjunto inteiro, desenhado da esquerda para a
+// direita, e não uma peça solta. É aqui que ficam as regras de quem anda com
+// quem:
+//
+//   - cachorro só aparece junto do hidrante ou do ponto de ônibus;
+//   - gato só junto do banco ou de pombo;
+//   - pombo sozinho nunca fica sem gato — sem gato ele vem em bando de 2 ou 3.
+//
+// Móvel sozinho continua valendo: hidrante sem cachorro e banco sem gato são
+// conjuntos como quaisquer outros. Repetir uma entrada é o jeito simples de
+// pesar o sorteio, o mesmo usado nos tipos de veículo.
+const CONJUNTOS = [
+  [BANCO],
+  [BANCO, GATO],
+  [GATO, BANCO],
+  [HIDRANTE],
+  [HIDRANTE, CACHORRO],
+  [CACHORRO, HIDRANTE],
+  [NITBIKE],
+  [PONTO_DE_ONIBUS],
+  [PONTO_DE_ONIBUS, CACHORRO],
+  [GATO, POMBO],
+  [POMBO, GATO],
+  [POMBO, POMBO],
+  [POMBO, POMBO, POMBO],
+];
+
+// Espaço entre duas peças do mesmo conjunto. Pequeno de propósito: elas
+// precisam ler como um grupo, não como dois itens que calharam de cair perto.
+const FOLGA_NO_CONJUNTO = 5;
+
+function larguraDoConjunto(conjunto) {
+  return (
+    conjunto.reduce((soma, peca) => soma + peca.largura, 0) +
+    FOLGA_NO_CONJUNTO * (conjunto.length - 1)
+  );
+}
+
+// Os itens são centralizados na faixa da calçada. Sem compensar, um sprite
+// baixo (o pombo) flutuaria acima da base dos outros: todos apoiam nesta
+// linha de chão. O valor é fixo de propósito — se fosse o item mais alto,
+// crescer o abrigo do ponto de ônibus arrastaria a calçada inteira para
+// baixo. Quem é mais alto que a referência cresce para cima.
+//
+// Daí sai uma altura máxima: acima dela o topo do sprite vaza do segmento e
+// aparece por cima do asfalto. É o teto do abrigo do ponto e da nitbike.
 const ALTURA_DE_APOIO = 46;
 const ALTURA_MAXIMA = ALTURA_DE_APOIO / 2 + SEGMENT_HEIGHT / 2;
 
@@ -110,13 +147,13 @@ const DESVIO_Y = 8;
 // Subir os 8px inteiros só é seguro para sprite baixo: no homem, que já está
 // quase no teto, o desvio para cima é aparado até onde a cabeça ainda cabe no
 // segmento. Para baixo o limite continua sendo o mosaico.
-function sortearDesvioY(item, aleatorio) {
-  const minimo = Math.max(-DESVIO_Y, item.altura - ALTURA_MAXIMA);
+function sortearDesvioY(peca, aleatorio) {
+  const minimo = Math.max(-DESVIO_Y, peca.altura - ALTURA_MAXIMA);
   return Math.round(minimo + aleatorio() * (DESVIO_Y - minimo));
 }
 
 // Posições seguras: longe do corredor central por onde o jogador anda e da
-// faixa de pedestres. O item é ancorado pela esquerda nessa coordenada.
+// faixa de pedestres. O conjunto é ancorado pela esquerda nessa coordenada.
 const POSICOES = [42, 104, 452, 514];
 
 // Coordenadas internas da arena (as mesmas 600x400 do GameArena). O abrigo do
@@ -124,14 +161,14 @@ const POSICOES = [42, 104, 452, 514];
 // invadir a vaga vizinha — 42 e 104 estão a só 62px de distância.
 const LARGURA_ARENA = 600;
 const MARGEM_BORDA = 8;
-const FOLGA_ENTRE_ITENS = 6;
+const FOLGA_ENTRE_CONJUNTOS = 6;
 
 // Sorteio semeado pelo índice da calçada, em vez de Math.random no mount.
 // Resolve três coisas de uma vez: a calçada não se reembaralha quando o
 // jogador anda para longe e volta (o segmento desmonta e remonta); o
 // StrictMode, que renderiza duas vezes em dev, produz o mesmo resultado; e —
 // o principal — dá para perguntar o que a calçada ANTERIOR sorteou e evitar
-// repetir o mesmo objeto em ruas seguidas. A semente da sessão mantém a
+// repetir o mesmo conjunto em ruas seguidas. A semente da sessão mantém a
 // variedade de uma partida para a outra.
 const SEMENTE_DA_SESSAO = Math.floor(Math.random() * 2 ** 31);
 
@@ -158,47 +195,70 @@ function embaralhar(itens, aleatorio) {
   return copia;
 }
 
-function sortearDecoracoes(aleatorio, itensDaAnterior) {
+// Distribui as peças do conjunto lado a lado e decide como cada uma aparece.
+function montarConjunto(conjunto, aleatorio) {
+  let x = 0;
+  return conjunto.map((peca, indice) => {
+    const aEsquerda = conjunto[indice - 1];
+    const aDireita = conjunto[indice + 1];
+
+    // O gato ao lado de um pombo está sempre olhando para ele: o espelhamento
+    // deixa de ser sorteado e passa a ser o lado em que o pombo caiu. Os
+    // sprites são desenhados virados para a direita, então espelhar é olhar
+    // para a esquerda.
+    const pombo = aEsquerda === POMBO || aDireita === POMBO;
+    const espelhado =
+      peca === GATO && pombo ? aEsquerda === POMBO : Boolean(peca.vivo) && aleatorio() < 0.5;
+
+    const colocada = {
+      peca,
+      deslocamentoX: x,
+      espelhado,
+      // Sorteado aqui junto com o conjunto: no corpo do componente, cada passo
+      // do jogador viraria quem está vivo do avesso e o faria pular pela
+      // calçada.
+      desvioY: peca.vivo ? sortearDesvioY(peca, aleatorio) : 0,
+    };
+    x += peca.largura + FOLGA_NO_CONJUNTO;
+    return colocada;
+  });
+}
+
+function sortearDecoracoes(aleatorio, conjuntosDaAnterior) {
   const quantidade = 1 + Math.floor(aleatorio() * 3); // 1 a 3 por calçada
   const vagas = embaralhar(POSICOES, aleatorio)
     .slice(0, quantidade)
     .sort((a, b) => a - b); // da esquerda para a direita, para saber quem é vizinho
 
-  const usados = new Set();
+  const pecasUsadas = new Set();
   const decoracoes = [];
-  let bordaOcupada = 0; // até onde o item anterior se estende
+  let bordaOcupada = 0; // até onde o conjunto anterior se estende
 
   for (const posX of vagas) {
-    if (posX < bordaOcupada) continue; // vaga engolida por um item largo
+    if (posX < bordaOcupada) continue; // vaga engolida por um conjunto largo
 
-    const opcoes = ELEMENTOS.filter(
-      (elemento) =>
-        // Móvel é único por calçada: dois bancos ou dois hidrantes na mesma
-        // quadra entregam o sorteio.
-        (elemento.repetivel || !usados.has(elemento)) &&
-        posX + elemento.largura <= LARGURA_ARENA - MARGEM_BORDA
+    const opcoes = CONJUNTOS.filter(
+      (conjunto) =>
+        // Peça é única por calçada: dois bancos ou dois hidrantes na mesma
+        // quadra entregam o sorteio, e vale também entre conjuntos diferentes
+        // — [BANCO] e [BANCO, GATO] não podem sair na mesma calçada.
+        conjunto.every((peca) => !pecasUsadas.has(peca)) &&
+        posX + larguraDoConjunto(conjunto) <= LARGURA_ARENA - MARGEM_BORDA
     );
     if (opcoes.length === 0) continue;
 
-    // Preferência (não regra) por quem não apareceu na calçada anterior: com
-    // sete itens e três vagas, sortear cada calçada isolada põe o mesmo
-    // objeto em ruas seguidas com frequência. Se sobrar nada, o sorteio volta
-    // a considerar tudo em vez de deixar a vaga vazia.
-    const ineditos = opcoes.filter((elemento) => !itensDaAnterior.includes(elemento));
+    // Preferência (não regra) por quem não apareceu na calçada anterior:
+    // sortear cada calçada isolada põe o mesmo conjunto em ruas seguidas com
+    // frequência. Se sobrar nada, o sorteio volta a considerar tudo em vez de
+    // deixar a vaga vazia.
+    const ineditos = opcoes.filter((conjunto) => !conjuntosDaAnterior.includes(conjunto));
     const lista = ineditos.length > 0 ? ineditos : opcoes;
 
-    const item = lista[Math.floor(aleatorio() * lista.length)];
-    usados.add(item);
-    bordaOcupada = posX + item.largura + FOLGA_ENTRE_ITENS;
+    const conjunto = lista[Math.floor(aleatorio() * lista.length)];
+    conjunto.forEach((peca) => pecasUsadas.add(peca));
+    bordaOcupada = posX + larguraDoConjunto(conjunto) + FOLGA_ENTRE_CONJUNTOS;
 
-    decoracoes.push({
-      posX,
-      item,
-      // Sorteado aqui junto com o item: no corpo do componente, cada passo do
-      // jogador viraria quem está vivo do avesso e o faria pular pela calçada.
-      espelhado: item.vivo && aleatorio() < 0.5,
-      desvioY: item.vivo ? sortearDesvioY(item, aleatorio) : 0,
-    });
+    decoracoes.push({ posX, conjunto, pecas: montarConjunto(conjunto, aleatorio) });
   }
 
   return decoracoes;
@@ -223,7 +283,7 @@ function decoracoesDaCalcada(indice) {
   const anterior = indice > PRIMEIRA_CALCADA ? decoracoesDaCalcada(indice - PASSO_ENTRE_CALCADAS) : [];
   const sorteio = sortearDecoracoes(
     geradorAleatorio(SEMENTE_DA_SESSAO + indice),
-    anterior.map((decoracao) => decoracao.item)
+    anterior.map((decoracao) => decoracao.conjunto)
   );
 
   cache.set(indice, sorteio);
@@ -232,8 +292,8 @@ function decoracoesDaCalcada(indice) {
 }
 
 function Sprite({ item, espelhado }) {
-  // Começa num quadro qualquer para que dois pombos na mesma calçada não
-  // biquem em uníssono.
+  // Começa num quadro qualquer para que dois pombos do mesmo bando não biquem
+  // em uníssono.
   const [quadro, setQuadro] = useState(() =>
     item.quadros ? Math.floor(Math.random() * item.quadros.length) : 0
   );
@@ -255,6 +315,7 @@ function Sprite({ item, espelhado }) {
       src={item.quadros ? item.quadros[quadro] : item.src}
       alt=""
       style={{
+        display: 'block',
         width: `${item.largura}px`,
         height: `${item.altura}px`,
         // A sombra só desce, então espelhar não a deixa caindo para o lado errado.
@@ -274,7 +335,7 @@ export default function SidewalkDecoration({ indice }) {
 
   return (
     <>
-      {decoracoes.map(({ posX, item, espelhado, desvioY }) => (
+      {decoracoes.map(({ posX, pecas }) => (
         <div
           key={posX}
           className="sidewalk-decoration"
@@ -282,24 +343,38 @@ export default function SidewalkDecoration({ indice }) {
             position: 'absolute',
             left: `${posX}px`,
             top: '50%',
-            transform: `translateY(calc(-50% + ${(ALTURA_DE_APOIO - item.altura) / 2 + desvioY}px))`,
+            // Âncora na linha do chão do conjunto: as peças se penduram nela
+            // pela base, cada uma com a própria altura.
+            transform: `translateY(${ALTURA_DE_APOIO / 2}px)`,
             pointerEvents: 'none',
           }}
         >
-          <Sprite item={item} espelhado={espelhado} />
-          {item.acompanhante && (
-            // Depois do sprite principal na ordem do DOM, então é desenhado
-            // por cima dele — que é o que "na frente do ponto" quer dizer.
+          {pecas.map(({ peca, deslocamentoX, espelhado, desvioY }, ordem) => (
             <div
+              key={ordem}
               style={{
                 position: 'absolute',
-                left: `${item.acompanhante.deslocamentoX}px`,
-                bottom: `${-item.acompanhante.deslocamentoY}px`,
+                left: `${deslocamentoX}px`,
+                bottom: `${-desvioY}px`,
               }}
             >
-              <Sprite item={item.acompanhante} espelhado={item.acompanhante.espelhado} />
+              <Sprite item={peca} espelhado={espelhado} />
+              {peca.acompanhante && (
+                // Depois do sprite principal na ordem do DOM, então é
+                // desenhado por cima dele — que é o que "na frente do ponto"
+                // quer dizer.
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${peca.acompanhante.deslocamentoX}px`,
+                    bottom: `${-peca.acompanhante.deslocamentoY}px`,
+                  }}
+                >
+                  <Sprite item={peca.acompanhante} espelhado={peca.acompanhante.espelhado} />
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
       ))}
     </>
