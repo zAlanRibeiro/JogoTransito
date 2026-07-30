@@ -28,7 +28,7 @@ export default function ResumoInfracoes({ infracoes, className = '' }) {
           return (
             <div key={gravidade} className={`infracoes-grupo infracoes-grupo--${gravidade}`}>
               <p className="infracoes-grupo-titulo">
-                {gravidade === 'leve' ? 'Leves (tiraram pontos)' : 'Pesadas (tiraram vida)'}:{' '}
+                {gravidade === 'leve' ? 'Infrações leves' : 'Infrações pesadas'}:{' '}
                 <strong>{totalDoGrupo}x</strong>
               </p>
               <ul>
