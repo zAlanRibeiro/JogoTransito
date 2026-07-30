@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 
 // Largura aproximada do sprite parado (altura 95px) e folga até o carro,
 // em px "locais" (coordenadas de antes da escala da arena). A folga
@@ -30,6 +30,11 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
   const [direcao, setDirecao] = useState(1);
   const direcaoRef = useRef(1); // o intervalo lê daqui, sem se recriar
   const indiceCaminhadaRef = useRef(0);
+  // Nada é desenhado antes de saber por qual lado ele entra. Sem isto ele
+  // aparecia na esquerda (posição inicial), o efeito descobria que precisava
+  // vir pela direita e o `transition: left` animava a correção — o guarda
+  // atravessava a tela inteira antes de começar a andar.
+  const [ladoDecidido, setLadoDecidido] = useState(false);
 
   const onCompleteRef = useRef(onComplete);
   useEffect(() => {
@@ -45,11 +50,17 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
   // fora da tela: antes, sem espaço à esquerda, o guarda era empurrado para a
   // borda (Math.max(10, ...)) e acabava desenhado EM CIMA do ônibus. Agora,
   // quando não cabe de um lado, ele vem do outro.
+  // useLayoutEffect e não useEffect: a medição precisa acontecer ANTES da
+  // primeira pintura, senão o navegador chega a desenhar o guarda no lado
+  // errado por um quadro.
   const alvoXRef = useRef(POSICAO_PADRAO);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const carEl = vehicleElsRef?.current?.get(laneIndex);
     const arenaEl = arenaRef?.current;
-    if (!carEl || !arenaEl) return;
+    if (!carEl || !arenaEl) {
+      setLadoDecidido(true); // sem medida: entra pela esquerda, como antes
+      return;
+    }
 
     const carRect = carEl.getBoundingClientRect();
     const arenaRect = arenaEl.getBoundingClientRect();
@@ -84,6 +95,7 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
       );
       setPosicaoX(LARGURA_ARENA + LARGURA_ESTIMADA_DO_GUARDA);
     }
+    setLadoDecidido(true);
   }, [laneIndex, vehicleElsRef, arenaRef]);
 
   useEffect(() => {
@@ -142,6 +154,10 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
       clearTimeout(timeout);
     };
   }, [fase]);
+
+  // O elemento só entra no DOM já na posição certa: um elemento recém-inserido
+  // não dispara transição, então não há varredura de tela.
+  if (!ladoDecidido) return null;
 
   return (
     <img
