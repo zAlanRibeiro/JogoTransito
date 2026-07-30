@@ -70,6 +70,10 @@ const ELEMENTOS = [
       // abrigo, e não dentro da parede.
       deslocamentoX: 76,
       deslocamentoY: 4,
+      // Sempre virado para a esquerda: é de lá que os veículos vêm (a
+      // animação `drive` corre da esquerda para a direita), então é para lá
+      // que olha quem espera o ônibus.
+      espelhado: true,
     },
   },
   { quadros: CICLO_POMBO, altura: 20, proporcao: 89 / 82, vivo: true, repetivel: true },
@@ -293,7 +297,7 @@ export default function SidewalkDecoration({ indice }) {
                 bottom: `${-item.acompanhante.deslocamentoY}px`,
               }}
             >
-              <Sprite item={item.acompanhante} />
+              <Sprite item={item.acompanhante} espelhado={item.acompanhante.espelhado} />
             </div>
           )}
         </div>
