@@ -94,6 +94,35 @@ describe('sortearRuaQueFura', () => {
     expect(chamadas).toBe(0);
   });
 
+  describe('carro que já passou da faixa', () => {
+    it('é descartado, mesmo com o intervalo liberado', () => {
+      const resultado = sortearRuaQueFura({
+        indiceDoJogador: 0, // par à frente: ruas 1 e 2
+        ultimaOrdem: -Infinity,
+        chance: 1,
+        aleatorio: aleatorioFixo(SEMPRE_PASSA, 0),
+        aindaVaiCruzar: (rua) => rua === 2, // o da rua 1 já passou
+      });
+      expect(resultado.rua).toBe(2);
+    });
+
+    it('não gasta a chance quando nenhum dos dois pode mais ser visto', () => {
+      let chamadas = 0;
+      const resultado = sortearRuaQueFura({
+        indiceDoJogador: 0,
+        ultimaOrdem: -Infinity,
+        chance: 1,
+        aleatorio: () => {
+          chamadas += 1;
+          return SEMPRE_PASSA;
+        },
+        aindaVaiCruzar: () => false,
+      });
+      expect(resultado).toBeNull();
+      expect(chamadas).toBe(0);
+    });
+  });
+
   it('devolve a ordem da rua escolhida, para alimentar a próxima chamada', () => {
     const primeira = sortearRuaQueFura({
       indiceDoJogador: 0,

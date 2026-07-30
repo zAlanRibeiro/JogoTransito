@@ -33,7 +33,7 @@ function sortearTipoDeVeiculo() {
   return TIPOS_DE_VEICULO[Math.floor(Math.random() * TIPOS_DE_VEICULO.length)];
 }
 
-export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarro = 4 }) {
+export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarro = 4, furandoSinal = false, onFimDaFurada }) {
   // Tipo do veículo é sorteado uma vez, no mount, e gruda pro resto da vida
   // da faixa — igual ao padrão já usado abaixo pra duracaoFixa. Se o tipo
   // mudasse a cada iteração da animação, a duração/largura mudariam junto
@@ -48,7 +48,9 @@ export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarr
   const [carroAtual, setCarroAtual] = useState(
     () => tipoVeiculo.sprites[Math.floor(Math.random() * tipoVeiculo.sprites.length)]
   );
-  const isMoving = lightState !== 'red';
+  // `furandoSinal` mantém este veículo andando com o sinal fechado — mas só
+  // até o fim da travessia dele (ver onAnimationIteration abaixo).
+  const isMoving = lightState !== 'red' || furandoSinal;
 
   const [duracaoFixa] = useState(() => duracaoCarro * tipoVeiculo.duracaoMultiplicador);
 
@@ -63,12 +65,21 @@ export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarr
     setCarroAtual(tipoVeiculo.sprites[indiceAleatorio]);
   };
 
+  // A animação é `infinite`: cada volta é, na prática, um carro novo (é aqui
+  // que o sprite é trocado). Furar o sinal é um evento único — UM carro
+  // avança e vai embora. Sem avisar o fim da volta, a rua viraria via livre
+  // no vermelho, com carro após carro passando enquanto o pedestre atravessa.
+  const aoFimDaVolta = () => {
+    sortearNovoCarro();
+    if (furandoSinal) onFimDaFurada?.();
+  };
+
   return (
     <div className="street-lane">
       <div
         className={`vehicle ${isMoving ? 'moving' : 'stopped'}`}
         style={{ animationDelay: delay, animationDuration: `${duracaoFixa}s`, top: `${tipoVeiculo.topOffset}px` }}
-        onAnimationIteration={sortearNovoCarro}
+        onAnimationIteration={aoFimDaVolta}
       >
         <img
           src={carroAtual}

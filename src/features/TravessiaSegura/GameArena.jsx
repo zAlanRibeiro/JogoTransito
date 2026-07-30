@@ -12,7 +12,7 @@ import ComandosModal from './components/ComandosModal';
 import ResumoInfracoes from './components/ResumoInfracoes';
 import { INFRACOES_ZERADAS, totalDeInfracoes } from './infracoes';
 import { StarIcon, HeartIcon, HourglassIcon, CheckIcon, WarningIcon, GraveWarningIcon, InfractionIcon, ArrowLeftIcon, ArrowRightIcon, TrophyIcon, RestartIcon, PauseIcon, PlayIcon, GamepadIcon, HomeIcon } from './components/HudIcons';
-import { SEGMENT_HEIGHT, mod3, segmentType, CROSSWALK_WIDTH, estaNaCalcadaComMargem } from './gameGrid';
+import { SEGMENT_HEIGHT, mod3, segmentType, CROSSWALK_WIDTH, estaNaCalcadaComMargem, crosswalkIndexFor } from './gameGrid';
 import { calcularDificuldade } from './difficulty';
 import { sortearRuaQueFura } from './furarSinal';
 
@@ -390,6 +390,21 @@ export default function GameArena() {
     resetGuardas();
   };
 
+  // O carro daquela rua ainda está antes da faixa de pedestre? Os veículos
+  // andam da esquerda para a direita, então "antes da faixa" é a borda direita
+  // do carro ainda à esquerda da borda esquerda da faixa. Serve para não
+  // sortear como furão um carro que já passou do ponto onde alguém veria a
+  // infração acontecer. useCallback com deps vazias: só lê refs, então tem
+  // identidade fixa e não reexecuta o efeito do semáforo.
+  const carroAindaVaiCruzarAFaixa = useCallback((rua) => {
+    const carro = vehicleElsRef.current.get(rua);
+    const faixaEl = arenaRef.current?.querySelector(
+      `.crosswalk[data-crosswalk-index="${crosswalkIndexFor(rua)}"]`
+    );
+    if (!carro || !faixaEl) return false;
+    return carro.getBoundingClientRect().right < faixaEl.getBoundingClientRect().left;
+  }, []);
+
   useEffect(() => {
     if (gameState !== 'playing' || pausado) return;
 
@@ -409,6 +424,7 @@ export default function GameArena() {
           indiceDoJogador: Math.floor(playerYRef.current / SEGMENT_HEIGHT),
           ultimaOrdem: ultimaFuradaRef.current,
           chance: dificuldadeRef.current.chanceDeFurarSinal,
+          aindaVaiCruzar: carroAindaVaiCruzarAFaixa,
         });
         if (furada) {
           ultimaFuradaRef.current = furada.ordem;
@@ -442,7 +458,7 @@ export default function GameArena() {
         }
       }
     }
-  }, [timeLeft, lightState, gameState, pausado, guardasAtivosRef, handleLoseLife, registrarInfracao, mostrarAviso]);
+  }, [timeLeft, lightState, gameState, pausado, guardasAtivosRef, handleLoseLife, registrarInfracao, mostrarAviso, carroAindaVaiCruzarAFaixa]);
 
   const handleTouchStart = (e) => {
     if (e && e.button !== undefined && e.button !== 0) return;
@@ -848,10 +864,13 @@ export default function GameArena() {
                   }}
                 >
                   <Vehicle
-                    // Ordem das condições: a via interditada pelo guarda para
-                    // qualquer carro, inclusive o que ia furar o sinal. Só
-                    // depois disso a rua sorteada segue andando no vermelho.
-                    lightState={isViaInterditada ? 'red' : i === ruaQueFura ? 'green' : lightState}
+                    lightState={isViaInterditada ? 'red' : lightState}
+                    // Via interditada pelo guarda para qualquer carro,
+                    // inclusive o que ia furar o sinal.
+                    furandoSinal={i === ruaQueFura && !isViaInterditada}
+                    // Aquele carro terminou de passar: a furada acabou. Não
+                    // liberamos a rua até o sinal abrir — só este carro furou.
+                    onFimDaFurada={() => setRuaQueFura(null)}
                     seed={i}
                     duracaoCarro={dificuldade.duracaoCarro}
                     registerRef={(el) => {

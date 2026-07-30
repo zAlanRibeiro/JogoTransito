@@ -16,8 +16,14 @@ export const RUAS_ENTRE_FURADAS = 3;
  * atravessando): furar o sinal numa rua que ele já deixou para trás, ou numa
  * que ele só alcança dali a várias travessias, não seria visto por ninguém.
  *
- * A chance é consultada só depois do intervalo, então um sorteio barrado pela
- * distância não "gasta" a chance daquele ciclo.
+ * A chance é consultada só depois dos filtros, então um sorteio barrado pela
+ * distância (ou por não haver carro em posição de ser visto) não "gasta" a
+ * chance daquele ciclo.
+ *
+ * `aindaVaiCruzar` responde se o carro daquela rua ainda não chegou na faixa.
+ * Quem sabe disso é a arena, que tem os elementos na tela — sem esse filtro o
+ * sorteio podia cair num carro que já tinha passado da faixa: ele terminaria a
+ * travessia sem ninguém ver e o intervalo de ruas seria gasto à toa.
  *
  * @returns {{rua: number, ordem: number} | null} `ordem` é o valor a guardar
  * para alimentar `ultimaOrdem` na chamada seguinte.
@@ -27,10 +33,11 @@ export function sortearRuaQueFura({
   ultimaOrdem,
   chance,
   aleatorio = Math.random,
+  aindaVaiCruzar = () => true,
 }) {
   const ruaLonge = crosswalkIndexFor(indiceDoJogador);
   const candidatas = [ruaLonge - 1, ruaLonge].filter(
-    (rua) => ordemDaRua(rua) - ultimaOrdem >= RUAS_ENTRE_FURADAS
+    (rua) => ordemDaRua(rua) - ultimaOrdem >= RUAS_ENTRE_FURADAS && aindaVaiCruzar(rua)
   );
 
   if (candidatas.length === 0) return null;
