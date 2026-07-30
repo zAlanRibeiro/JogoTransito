@@ -13,14 +13,14 @@ describe('ResumoInfracoes', () => {
   it('celebra a partida sem nenhuma infração', () => {
     const html = renderizar(INFRACOES_ZERADAS);
     expect(html).toContain('Nenhuma infração');
-    expect(html).not.toContain('Leves');
-    expect(html).not.toContain('Pesadas');
+    expect(html).not.toContain('leves');
+    expect(html).not.toContain('pesadas');
   });
 
   it('mostra só o grupo que teve ocorrência', () => {
     const html = renderizar({ ...INFRACOES_ZERADAS, faixa: 2 });
-    expect(html).toContain('Leves');
-    expect(html).not.toContain('Pesadas');
+    expect(html).toContain('Infrações leves');
+    expect(html).not.toContain('Infrações pesadas');
     expect(html).not.toContain('Nenhuma infração');
   });
 
@@ -31,9 +31,9 @@ describe('ResumoInfracoes', () => {
       sinalAberto: 1,  // leve
       carro: 3,        // pesada
     });
-    expect(html).toContain('Leves (tiraram pontos)');
+    expect(html).toContain('Infrações leves');
     expect(html).toContain('<strong>3x</strong>'); // total de leves: 2 + 1
-    expect(html).toContain('Pesadas (tiraram vida)');
+    expect(html).toContain('Infrações pesadas');
     expect(html).toContain('Atropelamentos');
   });
 
