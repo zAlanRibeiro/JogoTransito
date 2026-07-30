@@ -10,6 +10,11 @@ const LARGURA_ESTIMADA_DO_GUARDA = 55;
 const FOLGA_ATE_O_CARRO = 38;
 const POSICAO_PADRAO = 100; // usada se não der pra medir o carro (ex: ele saiu da tela)
 
+// Coordenadas internas da arena, e a folga mínima até as bordas dela.
+const LARGURA_ARENA = 600;
+const MARGEM_DA_ARENA = 10;
+const PASSO = 15;
+
 // Ciclo de caminhada em "ping-pong": 1 (contato, perna da frente
 // plantada) -> 2 (passagem, pernas cruzando) -> 3 (contato oposto) -> 2
 // (passagem de novo) -> repete. Evita o salto visual de pular direto de
@@ -21,6 +26,9 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
   const [fase, setFase] = useState('entrando');
   const [frame, setFrame] = useState(1);
   const [posicaoX, setPosicaoX] = useState(-50);
+  // 1 = entra pela esquerda andando para a direita; -1 = o contrário.
+  const [direcao, setDirecao] = useState(1);
+  const direcaoRef = useRef(1); // o intervalo lê daqui, sem se recriar
   const indiceCaminhadaRef = useRef(0);
 
   const onCompleteRef = useRef(onComplete);
@@ -31,6 +39,12 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
   // Mede a posição real do carro UMA vez, ao montar, e para logo antes
   // dele — nunca em cima, driblando o número fixo de antes que às vezes
   // deixava o guarda sobreposto ao carro.
+  //
+  // O lado por onde ele chega também é decidido aqui. Um ônibus parado sobre
+  // a faixa chega a ocupar metade da arena e muitas vezes tem a traseira já
+  // fora da tela: antes, sem espaço à esquerda, o guarda era empurrado para a
+  // borda (Math.max(10, ...)) e acabava desenhado EM CIMA do ônibus. Agora,
+  // quando não cabe de um lado, ele vem do outro.
   const alvoXRef = useRef(POSICAO_PADRAO);
   useEffect(() => {
     const carEl = vehicleElsRef?.current?.get(laneIndex);
@@ -39,10 +53,37 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
 
     const carRect = carEl.getBoundingClientRect();
     const arenaRect = arenaEl.getBoundingClientRect();
-    const scale = arenaRect.width / 600;
-    const carLeftLocal = (carRect.left - arenaRect.left) / scale;
+    const escala = arenaRect.width / LARGURA_ARENA;
+    const esquerdaDoCarro = (carRect.left - arenaRect.left) / escala;
+    const direitaDoCarro = (carRect.right - arenaRect.left) / escala;
 
-    alvoXRef.current = Math.max(10, carLeftLocal - LARGURA_ESTIMADA_DO_GUARDA - FOLGA_ATE_O_CARRO);
+    const espacoAEsquerda = esquerdaDoCarro - FOLGA_ATE_O_CARRO - MARGEM_DA_ARENA;
+    const espacoADireita =
+      LARGURA_ARENA - MARGEM_DA_ARENA - (direitaDoCarro + FOLGA_ATE_O_CARRO);
+
+    const cabeAEsquerda = espacoAEsquerda >= LARGURA_ESTIMADA_DO_GUARDA;
+    const cabeADireita = espacoADireita >= LARGURA_ESTIMADA_DO_GUARDA;
+    // Se não couber dos dois lados (veículo atravessado na tela inteira),
+    // fica com o lado mais folgado: melhor um pouco apertado do que em cima.
+    const vemPelaEsquerda = cabeAEsquerda || (!cabeADireita && espacoAEsquerda >= espacoADireita);
+
+    if (vemPelaEsquerda) {
+      direcaoRef.current = 1;
+      setDirecao(1);
+      alvoXRef.current = Math.max(
+        MARGEM_DA_ARENA,
+        esquerdaDoCarro - FOLGA_ATE_O_CARRO - LARGURA_ESTIMADA_DO_GUARDA
+      );
+      setPosicaoX(-LARGURA_ESTIMADA_DO_GUARDA);
+    } else {
+      direcaoRef.current = -1;
+      setDirecao(-1);
+      alvoXRef.current = Math.min(
+        LARGURA_ARENA - MARGEM_DA_ARENA - LARGURA_ESTIMADA_DO_GUARDA,
+        direitaDoCarro + FOLGA_ATE_O_CARRO
+      );
+      setPosicaoX(LARGURA_ARENA + LARGURA_ESTIMADA_DO_GUARDA);
+    }
   }, [laneIndex, vehicleElsRef, arenaRef]);
 
   useEffect(() => {
@@ -55,12 +96,13 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
         setFrame(SEQUENCIA_CAMINHADA[indiceCaminhadaRef.current]);
 
         setPosicaoX((x) => {
-          if (x >= alvoXRef.current) {
+          const chegou = direcaoRef.current === 1 ? x >= alvoXRef.current : x <= alvoXRef.current;
+          if (chegou) {
             setFase('multando');
             setFrame(6);
-            return x;
+            return alvoXRef.current;
           }
-          return x + 15;
+          return x + PASSO * direcaoRef.current;
         });
       }, 150);
 
@@ -81,13 +123,16 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
         setFrame(SEQUENCIA_CAMINHADA[indiceCaminhadaRef.current]);
 
         setPosicaoX((x) => {
-          if (x <= -60) {
+          // Vai embora pelo mesmo lado por onde chegou.
+          const saiu =
+            direcaoRef.current === 1 ? x <= -60 : x >= LARGURA_ARENA + 60;
+          if (saiu) {
             if (onCompleteRef.current) {
               onCompleteRef.current();
             }
             return x;
           }
-          return x - 15;
+          return x - PASSO * direcaoRef.current;
         });
       }, 150);
     }
@@ -110,7 +155,10 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
         zIndex: 85,
         transition: 'left 0.15s linear',
         filter: 'drop-shadow(2px 4px 4px rgba(0,0,0,0.4))',
-        transform: fase === 'saindo' ? 'scaleX(-1)' : 'none'
+        // O sprite é desenhado virado para a direita. Ele olha para onde está
+        // andando e, ao multar, para o veículo — que está sempre do lado
+        // oposto ao que ele entrou.
+        transform: (direcao === -1) !== (fase === 'saindo') ? 'scaleX(-1)' : 'none'
       }}
     />
   );

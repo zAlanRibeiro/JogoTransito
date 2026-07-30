@@ -49,21 +49,41 @@ const CICLO_HOMEM = [
 // vez na mesma calçada — só o pombo, que anda em bando; cachorro e gato são
 // de alguém, e duas cópias da mesma pessoa na mesma quadra entregariam o
 // sorteio na hora.
+// `acompanhante` é quem não existe sozinho: quem espera o ônibus espera NO
+// ponto, então o homem é parte do abrigo, desenhado por cima e um pouco à
+// frente dele. Sem isso ele aparecia esperando ônibus no meio da quadra.
 const ELEMENTOS = [
   { src: banco, altura: 40, proporcao: 71 / 49 },
   { src: hidrante, altura: 44, proporcao: 43 / 54 },
   { src: nitbike, altura: 73, proporcao: 88 / 72 },
-  { src: pontoOnibus, altura: 72, proporcao: 86 / 55 },
+  {
+    src: pontoOnibus,
+    altura: 72,
+    proporcao: 86 / 55,
+    acompanhante: {
+      quadros: CICLO_HOMEM,
+      altura: 70,
+      proporcao: 29 / 74,
+      msPorQuadro: MS_DO_HOMEM,
+      // Encostado no montante direito do abrigo, dentro da largura dele. A
+      // base desce 4px: é o que faz ele ler como estando NA FRENTE do
+      // abrigo, e não dentro da parede.
+      deslocamentoX: 76,
+      deslocamentoY: 4,
+    },
+  },
   { quadros: CICLO_POMBO, altura: 20, proporcao: 89 / 82, vivo: true, repetivel: true },
   { quadros: CICLO_CACHORRO, altura: 27, proporcao: 32 / 28, vivo: true, msPorQuadro: 130 },
   { quadros: CICLO_GATO, altura: 26, proporcao: 28 / 33, vivo: true, msPorQuadro: 320 },
-  { quadros: CICLO_HOMEM, altura: 70, proporcao: 29 / 74, vivo: true, msPorQuadro: MS_DO_HOMEM },
-].map((elemento) => ({
-  ...elemento,
+].map(function comLargura(elemento) {
   // Largura resolvida uma vez: o sorteio precisa dela para saber se o item
   // cabe na vaga, e o render para desenhar.
-  largura: Math.round(elemento.altura * elemento.proporcao),
-}));
+  return {
+    ...elemento,
+    largura: Math.round(elemento.altura * elemento.proporcao),
+    ...(elemento.acompanhante ? { acompanhante: comLargura(elemento.acompanhante) } : {}),
+  };
+});
 
 // Os itens são centralizados na faixa da calçada. Sem compensar, um sprite
 // baixo (o pombo) flutuaria acima da base dos outros: empurra cada um para
@@ -263,6 +283,19 @@ export default function SidewalkDecoration({ indice }) {
           }}
         >
           <Sprite item={item} espelhado={espelhado} />
+          {item.acompanhante && (
+            // Depois do sprite principal na ordem do DOM, então é desenhado
+            // por cima dele — que é o que "na frente do ponto" quer dizer.
+            <div
+              style={{
+                position: 'absolute',
+                left: `${item.acompanhante.deslocamentoX}px`,
+                bottom: `${-item.acompanhante.deslocamentoY}px`,
+              }}
+            >
+              <Sprite item={item.acompanhante} />
+            </div>
+          )}
         </div>
       ))}
     </>
