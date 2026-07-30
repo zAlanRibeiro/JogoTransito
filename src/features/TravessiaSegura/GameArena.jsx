@@ -7,6 +7,7 @@ import AgenteAnimado from './components/AgenteAnimado';
 import usePlayerMovement from './hooks/usePlayerMovement';
 import useGuardSystem, { BONUS_CHAMAR_GUARDA } from './hooks/useGuardSystem';
 import useResponsiveScale from './hooks/useResponsiveScale';
+import useOrientacao, { pedirPaisagem } from './hooks/useOrientacao';
 import MainMenu from './components/MainMenu';
 import ComandosModal from './components/ComandosModal';
 import ResumoInfracoes from './components/ResumoInfracoes';
@@ -488,6 +489,10 @@ export default function GameArena() {
     >
       {gameState === 'menu' && (
         <MainMenu onStartGame={() => {
+          // Pedido de paisagem aqui e não num efeito: o navegador só concede
+          // tela cheia (e, com ela, a trava de orientação) dentro de um gesto
+          // do usuário. Falha silenciosa onde não há suporte — ver useOrientacao.
+          pedirPaisagem();
           setGameState('playing');
           restartGame();
         }} />
