@@ -399,7 +399,18 @@ body {
 /* --- 1. A ARENA E O CENÁRIO DE FUNDO ---
    Tamanho interno fixo (600x400) para manter o sistema de coordenadas do
    jogo; o fator de escala real é calculado em runtime (useResponsiveScale)
-   para caber em qualquer tela, do celular ao desktop. */
+   para caber em qualquer tela, do celular ao desktop.
+
+   A ampliação é aplicada com `zoom` (em GameArena), não com
+   `transform: scale()`. O transform reamostra a camada inteira já
+   rasterizada, com filtro linear, e nesse caminho o `image-rendering:
+   pixelated` espalhado por este arquivo NÃO tem efeito nenhum: medindo um
+   xadrez de preto e branco puros dentro da arena em scale(1.74), 6% dos
+   pixels saíam em tons de cinza inventados pela interpolação — e o borrão
+   aparecia e desaparecia conforme o tamanho da janela, porque fatores
+   inteiros (1.0, 2.0) não misturam e fracionários (1.74, 1.33) sim. O
+   `zoom` escala o layout: cada sprite é rasterizado já no tamanho final e
+   o pixelated volta a valer (1%, só a borda). */
 .game-arena {
   position: relative;
   width: 600px;
@@ -409,7 +420,6 @@ body {
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   background-color: #FFFF;
-  transform-origin: center center;
 }
 
 .hud {
