@@ -585,6 +585,31 @@ body {
   100% { transform: translateX(800px); }
 }
 
+/* Giroflex da viatura: o segundo quadro (mesmo desenho, metades da barra
+   invertidas) fica empilhado sobre o primeiro e só a opacidade alterna. Sai
+   mais barato que trocar o src por temporizador — não custa nem um timer nem
+   um re-render por piscada, e cada viatura na tela pisca sozinha. */
+.giroflex-piscando {
+  position: absolute;
+  left: 0;
+  top: 0;
+  animation: piscarGiroflex 0.7s infinite;
+}
+
+/* Os patamares planos fazem a troca ser instantânea, sem depender da função
+   de tempo: é um pisca, não um esmaecer. */
+@keyframes piscarGiroflex {
+  0%, 49.9% { opacity: 0; }
+  50%, 100% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .giroflex-piscando {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 /* --- 5. O PEDESTRE ANDANDO --- */
 .pedestrian {
   position: absolute;
@@ -1183,7 +1208,8 @@ body {
 /* Congela os veículos enquanto o jogo está pausado: a animação CSS continua
    avançando em segundo plano, então sem isto os carros "teleportariam" na
    volta. */
-.game-arena.pausado .vehicle {
+.game-arena.pausado .vehicle,
+.game-arena.pausado .giroflex-piscando {
   animation-play-state: paused !important;
 }
 
