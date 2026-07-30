@@ -56,56 +56,69 @@ function sortearTipoDeVeiculo() {
   return TIPOS_DE_VEICULO[Math.floor(Math.random() * TIPOS_DE_VEICULO.length)];
 }
 
+// Cada passagem é um veículo novo: tipo, sprite e duração sorteados de uma
+// vez. A duração é congelada aqui, e não lida a cada render, porque a
+// dificuldade muda `duracaoCarro` no meio da partida — trocar a duração de
+// uma animação CSS em andamento faz o navegador recalcular a posição na hora,
+// e o carro salta na pista.
+function sortearVeiculo(duracaoCarro, geracao) {
+  const tipo = sortearTipoDeVeiculo();
+  return {
+    tipo,
+    sprite: tipo.sprites[Math.floor(Math.random() * tipo.sprites.length)],
+    duracao: duracaoCarro * tipo.duracaoMultiplicador,
+    geracao,
+  };
+}
+
 export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarro = 4, furandoSinal = false, onFimDaFurada }) {
-  // Tipo do veículo é sorteado uma vez, no mount, e gruda pro resto da vida
-  // da faixa — igual ao padrão já usado abaixo pra duracaoFixa. Se o tipo
-  // mudasse a cada iteração da animação, a duração/largura mudariam junto
-  // no meio do caminho e reabriríamos o mesmo bug do "pulo dos carros" já
-  // corrigido antes (mudar propriedades de uma animação CSS em andamento
-  // faz o navegador recalcular a posição na hora).
   // Sorteado de verdade, e não derivado do índice da faixa: com
   // `seed % 6` a sequência era sempre carro, carro, moto, ônibus,
   // repetindo a cada duas travessias — o jogador decorava o trajeto e a
   // variedade de veículos não mudava nada na prática.
-  const [tipoVeiculo] = useState(sortearTipoDeVeiculo);
-  const [carroAtual, setCarroAtual] = useState(
-    () => tipoVeiculo.sprites[Math.floor(Math.random() * tipoVeiculo.sprites.length)]
-  );
+  const [veiculo, setVeiculo] = useState(() => sortearVeiculo(duracaoCarro, 0));
+  const tipoVeiculo = veiculo.tipo;
+
   // `furandoSinal` mantém este veículo andando com o sinal fechado — mas só
   // até o fim da travessia dele (ver onAnimationIteration abaixo).
   const isMoving = lightState !== 'red' || furandoSinal;
 
-  const [duracaoFixa] = useState(() => duracaoCarro * tipoVeiculo.duracaoMultiplicador);
-
   // O "pulo do gato": usamos o índice da rua para atrasar a animação (de -0s
-  // até -duracaoFixa). Com isso, cada carro aparece espalhado pela tela e
-  // NUNCA vai bater em outro carro!
-  const delay = `-${(Math.abs(Math.sin(seed)) * duracaoFixa).toFixed(2)}s`;
+  // até -duracao). Com isso, cada carro aparece espalhado pela tela e NUNCA
+  // vai bater em outro carro! Só vale para o primeiro: do segundo em diante o
+  // veículo entra pela esquerda no tempo certo, sem precisar de adiantamento.
+  const delay =
+    veiculo.geracao === 0 ? `-${(Math.abs(Math.sin(seed)) * veiculo.duracao).toFixed(2)}s` : '0s';
 
-  const sortearNovoCarro = () => {
-    if (tipoVeiculo.sprites.length < 2) return; // moto/ônibus só têm 1 sprite — nada pra variar
-    const indiceAleatorio = Math.floor(Math.random() * tipoVeiculo.sprites.length);
-    setCarroAtual(tipoVeiculo.sprites[indiceAleatorio]);
-  };
-
-  // A animação é `infinite`: cada volta é, na prática, um carro novo (é aqui
-  // que o sprite é trocado). Furar o sinal é um evento único — UM carro
-  // avança e vai embora. Sem avisar o fim da volta, a rua viraria via livre
-  // no vermelho, com carro após carro passando enquanto o pedestre atravessa.
+  // A animação é `infinite`: cada volta é um veículo novo, e é aqui que ele é
+  // sorteado — tipo, cor e duração. Antes só a cor mudava e o tipo grudava na
+  // faixa pra sempre, então uma rua sorteada como moto passava moto o resto
+  // da partida inteira.
+  //
+  // A troca só pode acontecer NESTE instante, com o veículo fora da tela: a
+  // duração da animação muda junto com o tipo, e mexer nela no meio do
+  // caminho faz o navegador recalcular a posição e o carro saltar. Por isso a
+  // `geracao` entra como key mais abaixo: o elemento é remontado e a animação
+  // recomeça do zero em vez de herdar o tempo já corrido.
   const aoFimDaVolta = () => {
-    sortearNovoCarro();
     if (furandoSinal) onFimDaFurada?.();
+    setVeiculo((atual) => sortearVeiculo(duracaoCarro, atual.geracao + 1));
   };
 
   return (
     <div className="street-lane">
       <div
+        // A key força a remontagem a cada veículo novo, e é ela que zera o
+        // relógio da animação — sem isso o navegador manteria o tempo já
+        // corrido e aplicaria a duração nova em cima dele, jogando o veículo
+        // para o meio da pista.
+        key={veiculo.geracao}
         className={`vehicle ${isMoving ? 'moving' : 'stopped'}`}
-        style={{ animationDelay: delay, animationDuration: `${duracaoFixa}s`, top: `${tipoVeiculo.topOffset}px` }}
+        style={{ animationDelay: delay, animationDuration: `${veiculo.duracao}s`, top: `${tipoVeiculo.topOffset}px` }}
         onAnimationIteration={aoFimDaVolta}
       >
         <img
-          src={carroAtual}
+          src={veiculo.sprite}
           alt=""
           // O ref vai na própria img (o elemento que tem o rotate(-90deg)),
           // não no <div> pai: getBoundingClientRect() só reflete a rotação
