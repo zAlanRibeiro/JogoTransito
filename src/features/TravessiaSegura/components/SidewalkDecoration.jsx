@@ -90,29 +90,35 @@ const GATO = comLargura({ quadros: CICLO_GATO, altura: 26, proporcao: 28 / 33, v
 
 // --- CONJUNTOS ---
 //
-// A vaga da calçada recebe um conjunto inteiro, desenhado da esquerda para a
-// direita, e não uma peça solta. É aqui que ficam as regras de quem anda com
-// quem:
+// A vaga da calçada recebe um conjunto inteiro, e não uma peça solta. É aqui
+// que ficam as regras de quem anda com quem:
 //
-//   - cachorro só aparece junto do hidrante ou do ponto de ônibus;
-//   - gato só junto do banco ou de pombo;
-//   - pombo sozinho nunca fica sem gato — sem gato ele vem em bando de 2 ou 3.
+//   - cachorro aparece junto do hidrante ou do ponto de ônibus;
+//   - gato, junto do banco ou do ponto de ônibus;
+//   - nenhum dos dois é obrigatório: móvel sozinho é conjunto como qualquer
+//     outro;
+//   - cachorro e gato nunca saem no mesmo grupo — cada conjunto tem no máximo
+//     um bicho de estimação;
+//   - pombo nunca aparece sozinho, só em bando de 2 ou 3.
 //
-// Móvel sozinho continua valendo: hidrante sem cachorro e banco sem gato são
-// conjuntos como quaisquer outros. Repetir uma entrada é o jeito simples de
-// pesar o sorteio, o mesmo usado nos tipos de veículo.
+// A ordem aqui não fixa o lado: montarConjunto inverte o grupo em metade dos
+// sorteios, então o bicho cai ora à esquerda, ora à direita do móvel.
+//
+// Repetir uma entrada é o jeito simples de pesar o sorteio, o mesmo usado nos
+// tipos de veículo: sem as repetições abaixo, o ponto de ônibus — que tem três
+// variações — apareceria o dobro do banco.
 const CONJUNTOS = [
   [BANCO],
+  [BANCO],
   [BANCO, GATO],
-  [GATO, BANCO],
+  [HIDRANTE],
   [HIDRANTE],
   [HIDRANTE, CACHORRO],
-  [CACHORRO, HIDRANTE],
+  [NITBIKE],
   [NITBIKE],
   [PONTO_DE_ONIBUS],
   [PONTO_DE_ONIBUS, CACHORRO],
-  [GATO, POMBO],
-  [POMBO, GATO],
+  [PONTO_DE_ONIBUS, GATO],
   [POMBO, POMBO],
   [POMBO, POMBO, POMBO],
 ];
@@ -197,26 +203,20 @@ function embaralhar(itens, aleatorio) {
 
 // Distribui as peças do conjunto lado a lado e decide como cada uma aparece.
 function montarConjunto(conjunto, aleatorio) {
+  // Metade dos sorteios inverte o grupo. É o que impede o bicho de nascer
+  // sempre do mesmo lado do móvel: o cachorro cai ora antes, ora depois do
+  // hidrante, sem precisar de uma entrada no catálogo para cada ordem.
+  const ordenado = aleatorio() < 0.5 ? conjunto : [...conjunto].reverse();
+
   let x = 0;
-  return conjunto.map((peca, indice) => {
-    const aEsquerda = conjunto[indice - 1];
-    const aDireita = conjunto[indice + 1];
-
-    // O gato ao lado de um pombo está sempre olhando para ele: o espelhamento
-    // deixa de ser sorteado e passa a ser o lado em que o pombo caiu. Os
-    // sprites são desenhados virados para a direita, então espelhar é olhar
-    // para a esquerda.
-    const pombo = aEsquerda === POMBO || aDireita === POMBO;
-    const espelhado =
-      peca === GATO && pombo ? aEsquerda === POMBO : Boolean(peca.vivo) && aleatorio() < 0.5;
-
+  return ordenado.map((peca) => {
     const colocada = {
       peca,
       deslocamentoX: x,
-      espelhado,
       // Sorteado aqui junto com o conjunto: no corpo do componente, cada passo
       // do jogador viraria quem está vivo do avesso e o faria pular pela
       // calçada.
+      espelhado: Boolean(peca.vivo) && aleatorio() < 0.5,
       desvioY: peca.vivo ? sortearDesvioY(peca, aleatorio) : 0,
     };
     x += peca.largura + FOLGA_NO_CONJUNTO;
