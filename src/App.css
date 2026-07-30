@@ -396,6 +396,51 @@ body {
   overflow: hidden;
 }
 
+/* Aviso de "vire o aparelho". Cobre a tela inteira porque é isso que ele
+   quer dizer: em pé não dá para jogar. Fica acima de tudo, inclusive dos
+   modais (100+), que são desenhados dentro da arena. */
+.aviso-rotacao {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: var(--nt-navy);
+  color: #fff;
+}
+
+.aviso-rotacao strong {
+  font-size: 1.4rem;
+}
+
+.aviso-rotacao span {
+  max-width: 22ch;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+/* O celular inclina de leve, sugerindo o gesto que se espera. */
+.aviso-rotacao svg {
+  animation: girarCelular 2.4s ease-in-out infinite;
+}
+
+@keyframes girarCelular {
+  0%, 45% { transform: rotate(0deg); }
+  60%, 90% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aviso-rotacao svg {
+    animation: none;
+    transform: rotate(-90deg);
+  }
+}
+
 /* --- 1. A ARENA E O CENÁRIO DE FUNDO ---
    Tamanho interno fixo (600x400) para manter o sistema de coordenadas do
    jogo; o fator de escala real é calculado em runtime (useResponsiveScale)

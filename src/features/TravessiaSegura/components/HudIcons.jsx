@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Heart, Hourglass, CheckCircle2, AlertTriangle, AlertOctagon, ShieldAlert, ChevronLeft, ChevronRight, Trophy, RotateCcw, Pause, Play, Gamepad2, Home } from 'lucide-react';
+import { Star, Heart, Hourglass, CheckCircle2, AlertTriangle, AlertOctagon, ShieldAlert, ChevronLeft, ChevronRight, Trophy, RotateCcw, Pause, Play, Gamepad2, Home, Smartphone } from 'lucide-react';
 
 /* Ícones do HUD — usando lucide-react (npm install lucide-react) em vez de
    emoji ou bitmap pixel a pixel desenhado à mão. Mesma API de antes, então
@@ -66,4 +66,8 @@ export function GamepadIcon({ size = 16, color = '#1e3c72', className, style }) 
 
 export function HomeIcon({ size = 16, color = '#1e3c72', className, style }) {
   return <Home size={size} color={color} strokeWidth={2.2} className={className} style={style} />;
+}
+
+export function CelularIcon({ size = 48, color = '#ffffff', className, style }) {
+  return <Smartphone size={size} color={color} strokeWidth={2} className={className} style={style} />;
 }
