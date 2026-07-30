@@ -435,7 +435,13 @@ export default function GameArena() {
     <div
       className={`game-arena ${pausado ? 'pausado' : ''}`}
       ref={arenaRef}
-      style={{ transform: `scale(${scale})` }}
+      style={{
+        // `zoom` e não `transform: scale()`: o transform borra a pixel art em
+        // escalas fracionárias e ignora o image-rendering (ver .game-arena no
+        // App.css). O zoom escala o layout, então cada sprite é rasterizado
+        // já no tamanho final.
+        zoom: scale,
+      }}
       onPointerDown={handleTouchStart}
       onPointerUp={handleTouchStop}
       onPointerLeave={handleTouchStop}
