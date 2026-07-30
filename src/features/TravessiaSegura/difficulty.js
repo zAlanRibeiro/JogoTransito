@@ -16,5 +16,11 @@ export function calcularDificuldade(pontos) {
     // Duração da animação do carro atravessando a pista (pode ser fracionada
     // — não alimenta nenhum contador visível). Quanto menor, mais rápido.
     duracaoCarro: Math.max(2, 4 - nivel * 0.25),
+    // Chance de algum carro furar o sinal a cada fechamento. Existe desde o
+    // nível 0 (o motorista imprudente não espera o jogador ficar bom) e
+    // cresce até o teto. A frequência real fica bem abaixo disso: o intervalo
+    // mínimo de RUAS_ENTRE_FURADAS ruas, em furarSinal.js, barra a maioria
+    // dos sorteios que dariam certo.
+    chanceDeFurarSinal: Math.min(0.45, 0.08 + nivel * 0.05),
   };
 }

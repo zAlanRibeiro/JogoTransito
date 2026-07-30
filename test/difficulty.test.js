@@ -56,4 +56,30 @@ describe('calcularDificuldade', () => {
   it('é uma função pura: mesma entrada, mesma saída', () => {
     expect(calcularDificuldade(75)).toEqual(calcularDificuldade(75));
   });
+
+  describe('chance de um carro furar o sinal', () => {
+    it('existe desde o começo e cresce com o nível', () => {
+      const inicio = calcularDificuldade(0).chanceDeFurarSinal;
+      const meio = calcularDificuldade(120).chanceDeFurarSinal;
+      const fim = calcularDificuldade(240).chanceDeFurarSinal;
+
+      expect(inicio).toBeGreaterThan(0);
+      expect(meio).toBeGreaterThan(inicio);
+      expect(fim).toBeGreaterThan(meio);
+    });
+
+    it('nunca cresce sem limite, nem passa de uma probabilidade válida', () => {
+      for (let pontos = 0; pontos <= 5000; pontos += 10) {
+        const chance = calcularDificuldade(pontos).chanceDeFurarSinal;
+        expect(chance).toBeGreaterThan(0);
+        expect(chance).toBeLessThanOrEqual(0.45);
+      }
+    });
+
+    // Mais da metade dos fechamentos com carro furando deixaria de ser
+    // exceção e viraria a regra do jogo.
+    it('mantém o carro que respeita o sinal como maioria, até no nível máximo', () => {
+      expect(calcularDificuldade(999999).chanceDeFurarSinal).toBeLessThan(0.5);
+    });
+  });
 });

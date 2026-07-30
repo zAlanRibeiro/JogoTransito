@@ -8,6 +8,7 @@ import {
   segmentType,
   crosswalkIndexFor,
   estaNaCalcadaComMargem,
+  ordemDaRua,
 } from '../src/features/TravessiaSegura/gameGrid';
 
 describe('properMod', () => {
@@ -106,5 +107,38 @@ describe('constantes do tabuleiro', () => {
     expect(CYCLE_LENGTH).toBe(SEGMENT_HEIGHT * 3);
     // Precisa bater com a largura de .crosswalk no App.css.
     expect(CROSSWALK_WIDTH).toBe(110);
+  });
+});
+
+describe('ordemDaRua', () => {
+  // O padrão é calçada, rua, rua: as ruas ficam nos índices 1, 2, 4, 5, 7, 8...
+  it('numera as ruas em sequência, ignorando as calçadas', () => {
+    expect(ordemDaRua(1)).toBe(1);
+    expect(ordemDaRua(2)).toBe(2);
+    expect(ordemDaRua(4)).toBe(3);
+    expect(ordemDaRua(5)).toBe(4);
+    expect(ordemDaRua(7)).toBe(5);
+    expect(ordemDaRua(8)).toBe(6);
+  });
+
+  it('cresce de um em um por rua percorrida', () => {
+    const ruas = [];
+    for (let i = 0; i < 60; i++) {
+      if (segmentType(i) === 'rua') ruas.push(ordemDaRua(i));
+    }
+    for (let i = 1; i < ruas.length; i++) {
+      expect(ruas[i] - ruas[i - 1]).toBe(1);
+    }
+  });
+
+  // O jogador começa em Y=0 e o tabuleiro renderiza segmentos atrás dele, com
+  // índice negativo: a numeração precisa continuar monotônica ali também,
+  // senão a regra de intervalo do carro que fura o sinal daria distâncias
+  // erradas no início da partida.
+  it('continua monotônica em índices negativos', () => {
+    expect(ordemDaRua(-1)).toBe(0);
+    expect(ordemDaRua(-2)).toBe(-1);
+    expect(ordemDaRua(-4)).toBe(-2);
+    expect(ordemDaRua(-5)).toBe(-3);
   });
 });

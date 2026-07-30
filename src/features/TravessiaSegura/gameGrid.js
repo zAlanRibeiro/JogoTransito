@@ -28,6 +28,16 @@ export function segmentType(i) {
   return PATTERN[mod3(i)];
 }
 
+// Posição da rua na sequência do trajeto: 1ª rua, 2ª rua, 3ª... O padrão tem
+// duas ruas por ciclo, então o índice do segmento NÃO serve para medir
+// distância em ruas — entre a rua de índice 2 e a de índice 4 existe uma
+// calçada, não uma rua. Usado por regras que precisam de intervalo contado em
+// ruas, como o carro que fura o sinal. Só faz sentido para índice de rua
+// (mod3 1 ou 2); para calçada o resultado não tem significado.
+export function ordemDaRua(i) {
+  return 2 * Math.floor(i / 3) + (mod3(i) === 1 ? 1 : 2);
+}
+
 // Limites (em Y "local", dentro de um ciclo de 300) que definem onde o
 // asfalto realmente começa/termina para fins de jogabilidade — mais
 // apertado que o segmento bruto de 100px da calçada, pra compensar o
