@@ -14,6 +14,7 @@ import { INFRACOES_ZERADAS, totalDeInfracoes } from './infracoes';
 import { StarIcon, HeartIcon, HourglassIcon, CheckIcon, WarningIcon, GraveWarningIcon, InfractionIcon, ArrowLeftIcon, ArrowRightIcon, TrophyIcon, RestartIcon, PauseIcon, PlayIcon, GamepadIcon, HomeIcon } from './components/HudIcons';
 import { SEGMENT_HEIGHT, mod3, segmentType, CROSSWALK_WIDTH, estaNaCalcadaComMargem } from './gameGrid';
 import { calcularDificuldade } from './difficulty';
+import { sortearRuaQueFura } from './furarSinal';
 
 const ARENA_HEIGHT = 400;
 const PLAYER_SCREEN_BOTTOM = 60;
@@ -81,6 +82,13 @@ export default function GameArena() {
 
   const [lightState, setLightState] = useState('green');
   const [timeLeft, setTimeLeft] = useState(5);
+  // Rua (índice do segmento) em que um carro está furando o sinal vermelho
+  // neste fechamento, ou null. Vale só enquanto o sinal está vermelho: no
+  // verde todos voltam a andar e a marca deixa de fazer sentido.
+  const [ruaQueFura, setRuaQueFura] = useState(null);
+  // Ordem, contada em ruas, da última vez que alguém furou — é o que garante
+  // o intervalo mínimo entre duas furadas (ver furarSinal.js).
+  const ultimaFuradaRef = useRef(-Infinity);
   // O semáforo roda em setTimeout (continua em segundo plano), mas o
   // jogador roda em requestAnimationFrame (congela quando a aba some). Sem
   // pausar, quem trocasse de aba no meio da rua voltava punido por um sinal
@@ -192,7 +200,7 @@ export default function GameArena() {
   const currentIndex = Math.floor(playerY / SEGMENT_HEIGHT);
 
   const { guardasAtivos, guardasAtivosRef, pistaValidaProxima, faixasComCarroParado, chamarGuarda, liberarGuarda, resetGuardas } =
-    useGuardSystem({ arenaRef, vehicleElsRef, lightState, gameState, currentIndex, onPenalidade: setPenalidade });
+    useGuardSystem({ arenaRef, vehicleElsRef, lightState, gameState, currentIndex, ruaQueFura, onPenalidade: setPenalidade });
 
   // Acompanha, ao longo de toda a travessia atual (desde que saiu da última
   // calçada), se o jogador já pisou fora da faixa em algum momento na rua —
@@ -351,6 +359,8 @@ export default function GameArena() {
     resetPosition();
     setLightState('green');
     setTimeLeft(5);
+    setRuaQueFura(null);
+    ultimaFuradaRef.current = -Infinity;
     setGameState('playing');
     setHasWonOnce(false);
     resetGuardas();
@@ -373,6 +383,8 @@ export default function GameArena() {
     resetPosition();
     setLightState('green');
     setTimeLeft(5);
+    setRuaQueFura(null);
+    ultimaFuradaRef.current = -Infinity;
     setHasWonOnce(false);
     setGameState('menu');
     resetGuardas();
@@ -391,9 +403,21 @@ export default function GameArena() {
       } else if (lightState === 'yellow') {
         setLightState('red');
         setTimeLeft(dificuldadeRef.current.duracaoVermelho);
+
+        // O sinal fechou para os carros: sorteia se algum não vai respeitar.
+        const furada = sortearRuaQueFura({
+          indiceDoJogador: Math.floor(playerYRef.current / SEGMENT_HEIGHT),
+          ultimaOrdem: ultimaFuradaRef.current,
+          chance: dificuldadeRef.current.chanceDeFurarSinal,
+        });
+        if (furada) {
+          ultimaFuradaRef.current = furada.ordem;
+          setRuaQueFura(furada.rua);
+        }
       } else if (lightState === 'red') {
         setLightState('green');
         setTimeLeft(dificuldadeRef.current.duracaoVerde);
+        setRuaQueFura(null);
 
         const currentSegIndex = Math.floor(playerYRef.current / SEGMENT_HEIGHT);
         // Mesma margem usada em usePlayerMovement pra decidir "já está na
@@ -824,7 +848,10 @@ export default function GameArena() {
                   }}
                 >
                   <Vehicle
-                    lightState={isViaInterditada ? 'red' : lightState}
+                    // Ordem das condições: a via interditada pelo guarda para
+                    // qualquer carro, inclusive o que ia furar o sinal. Só
+                    // depois disso a rua sorteada segue andando no vermelho.
+                    lightState={isViaInterditada ? 'red' : i === ruaQueFura ? 'green' : lightState}
                     seed={i}
                     duracaoCarro={dificuldade.duracaoCarro}
                     registerRef={(el) => {

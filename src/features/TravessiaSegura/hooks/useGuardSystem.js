@@ -21,7 +21,7 @@ export const BONUS_CHAMAR_GUARDA = 5;
 // cena), então podem sair da lista de já-atendidas em vez de crescer sem
 // limite durante uma partida longa.
 const FAIXAS_ATRAS_A_MANTER = 6;
-export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, gameState, currentIndex, onPenalidade }) {
+export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, gameState, currentIndex, ruaQueFura, onPenalidade }) {
   const [agentesChamados, setAgentesChamados] = useState([]);
   const [guardasAtivos, setGuardasAtivos] = useState([]);
   const guardasAtivosRef = useRef([]);
@@ -42,6 +42,15 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
   useEffect(() => {
     guardasAtivosRef.current = guardasAtivos;
   }, [guardasAtivos]);
+
+  // O scanner só é recriado quando o sinal/estado muda, então precisa ler a
+  // rua do carro furão por ref. Espelhado num efeito (e não durante o render)
+  // pelo mesmo motivo de guardasAtivosRef acima; o atraso de um render é
+  // irrelevante para um radar que roda a cada 300ms.
+  const ruaQueFuraRef = useRef(null);
+  useEffect(() => {
+    ruaQueFuraRef.current = ruaQueFura;
+  }, [ruaQueFura]);
 
   // Descarta as faixas já atendidas que ficaram para trás. Devolver o
   // array original quando nada muda evita re-render a cada passo.
@@ -83,6 +92,13 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
         const novasFaixasComCarro = [];
 
         vehicleElsRef.current.forEach((el, laneIndex) => {
+          // O carro que está furando o sinal cruza a faixa em MOVIMENTO: não é
+          // um carro parado irregularmente. Sem esta exceção ele apareceria no
+          // radar, o jogador ganharia o bônus por chamar o guarda para quem
+          // ninguém consegue multar, e a faixa contaria como bloqueada —
+          // servindo de desculpa falsa para atravessar fora dela.
+          if (laneIndex === ruaQueFuraRef.current) return;
+
           const indiceDaFaixaDoCarro = mod3(laneIndex) === 2 ? laneIndex : laneIndex + 1;
           if (indiceDaFaixaDoCarro !== indiceDaFaixaAlvo) return; // não é a faixa atual/próxima do jogador
 
