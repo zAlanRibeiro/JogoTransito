@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { PATTERN } from '../gameGrid';
+import { PATTERN, SEGMENT_HEIGHT } from '../gameGrid';
 import banco from '../../../assets/banco.png';
 import hidrante from '../../../assets/hidrante.png';
 import nitbike from '../../../assets/nitbike.png';
@@ -13,6 +13,9 @@ import cachorro3 from '../../../assets/cachorro3.png';
 import gato1 from '../../../assets/gato1.png';
 import gato2 from '../../../assets/gato2.png';
 import gato3 from '../../../assets/gato3.png';
+import homemEspera1 from '../../../assets/homemEspera1.png';
+import homemEspera2 from '../../../assets/homemEspera2.png';
+import homemEspera3 from '../../../assets/homemEspera3.png';
 
 // Vai-e-volta como o ciclo de caminhada do pedestre: o quadro do meio é
 // reaproveitado na volta. Os três quadros de cada bicho compartilham o mesmo
@@ -22,22 +25,39 @@ const CICLO_CACHORRO = [cachorro1, cachorro2, cachorro3, cachorro2];
 const CICLO_GATO = [gato1, gato2, gato3, gato2];
 const MS_POR_QUADRO = 190;
 
+// O homem no ponto não pisca como um bicho: ele ESPERA. A espera é feita
+// repetindo o quadro parado dentro da própria sequência — mesmo truque que o
+// Vehicle usa para pesar o sorteio de tipo sem escrever um gerador ponderado.
+// A 500ms por quadro, o ciclo inteiro leva 14 segundos: fica parado 5s, olha
+// a rua 1,5s, volta a esperar 4,5s, confere o relógio 2s e recomeça.
+const MS_DO_HOMEM = 500;
+const paradoPor = (vezes) => Array(vezes).fill(homemEspera1);
+const CICLO_HOMEM = [
+  ...paradoPor(10),
+  homemEspera2, homemEspera2, homemEspera2,
+  ...paradoPor(9),
+  homemEspera3, homemEspera3, homemEspera3, homemEspera3,
+  ...paradoPor(2),
+];
+
 // Alturas escolhidas por item; a largura sai da proporção real do arquivo
 // para o sprite não esticar. Antes o banco era desenhado em 90x45 (2.0)
 // sendo que a arte é 71x49 (1.45), e o hidrante em 40x40 sendo 43x54.
 //
-// `bicho` é o que está vivo: vira para qualquer lado e passeia fora da linha
+// `vivo` é bicho ou gente: vira para qualquer lado e fica fora da linha exata
 // em que o mobiliário se apoia. `repetivel` é quem pode aparecer mais de uma
 // vez na mesma calçada — só o pombo, que anda em bando; cachorro e gato são
-// de alguém, então um por quadra.
+// de alguém, e duas cópias da mesma pessoa na mesma quadra entregariam o
+// sorteio na hora.
 const ELEMENTOS = [
   { src: banco, altura: 40, proporcao: 71 / 49 },
   { src: hidrante, altura: 44, proporcao: 43 / 54 },
   { src: nitbike, altura: 73, proporcao: 88 / 72 },
   { src: pontoOnibus, altura: 72, proporcao: 86 / 55 },
-  { quadros: CICLO_POMBO, altura: 20, proporcao: 89 / 82, bicho: true, repetivel: true },
-  { quadros: CICLO_CACHORRO, altura: 27, proporcao: 32 / 28, bicho: true, msPorQuadro: 130 },
-  { quadros: CICLO_GATO, altura: 26, proporcao: 28 / 33, bicho: true, msPorQuadro: 320 },
+  { quadros: CICLO_POMBO, altura: 20, proporcao: 89 / 82, vivo: true, repetivel: true },
+  { quadros: CICLO_CACHORRO, altura: 27, proporcao: 32 / 28, vivo: true, msPorQuadro: 130 },
+  { quadros: CICLO_GATO, altura: 26, proporcao: 28 / 33, vivo: true, msPorQuadro: 320 },
+  { quadros: CICLO_HOMEM, altura: 70, proporcao: 29 / 74, vivo: true, msPorQuadro: MS_DO_HOMEM },
 ].map((elemento) => ({
   ...elemento,
   // Largura resolvida uma vez: o sorteio precisa dela para saber se o item
@@ -52,14 +72,24 @@ const ELEMENTOS = [
 // arrastaria a calçada inteira para baixo. Quem é mais alto que a referência
 // cresce para cima, que é como um abrigo se comporta.
 //
-// Como a base fica em (metade do segmento + ALTURA_DE_APOIO/2), o item mais
-// alto possível é ALTURA_DE_APOIO/2 + SEGMENT_HEIGHT/2 = 73px: acima disso o
-// telhado do abrigo vazaria do segmento e apareceria por cima do asfalto.
+// Como a base fica em (metade do segmento + ALTURA_DE_APOIO/2), existe uma
+// altura máxima: acima dela o topo do sprite vaza do segmento e aparece por
+// cima do asfalto. É o teto do abrigo do ponto e da nitbike.
 const ALTURA_DE_APOIO = 46;
+const ALTURA_MAXIMA = ALTURA_DE_APOIO / 2 + SEGMENT_HEIGHT / 2;
 
-// Quanto um bicho pode subir ou descer na calçada a partir dessa linha. Fica
-// bem abaixo da metade da faixa de mosaico, senão o pombo encostaria na grade.
+// Quanto quem está vivo pode subir ou descer na calçada a partir dessa linha.
+// Fica bem abaixo da metade da faixa de mosaico, senão o pombo encostaria na
+// grade.
 const DESVIO_Y = 8;
+
+// Subir os 8px inteiros só é seguro para sprite baixo: no homem, que já está
+// quase no teto, o desvio para cima é aparado até onde a cabeça ainda cabe no
+// segmento. Para baixo o limite continua sendo o mosaico.
+function sortearDesvioY(item, aleatorio) {
+  const minimo = Math.max(-DESVIO_Y, item.altura - ALTURA_MAXIMA);
+  return Math.round(minimo + aleatorio() * (DESVIO_Y - minimo));
+}
 
 // Posições seguras: longe do corredor central por onde o jogador anda e da
 // faixa de pedestres. O item é ancorado pela esquerda nessa coordenada.
@@ -141,9 +171,9 @@ function sortearDecoracoes(aleatorio, itensDaAnterior) {
       posX,
       item,
       // Sorteado aqui junto com o item: no corpo do componente, cada passo do
-      // jogador viraria o bicho do avesso e o faria pular pela calçada.
-      espelhado: item.bicho && aleatorio() < 0.5,
-      desvioY: item.bicho ? Math.round((aleatorio() * 2 - 1) * DESVIO_Y) : 0,
+      // jogador viraria quem está vivo do avesso e o faria pular pela calçada.
+      espelhado: item.vivo && aleatorio() < 0.5,
+      desvioY: item.vivo ? sortearDesvioY(item, aleatorio) : 0,
     });
   }
 
@@ -187,7 +217,7 @@ function Sprite({ item, espelhado }) {
   useEffect(() => {
     if (!item.quadros) return undefined;
     // Decoração é enfeite, não jogabilidade: quem pede menos movimento no
-    // sistema fica com os bichos parados, igual às piscadas do App.css.
+    // sistema fica com bichos e gente parados, igual às piscadas do App.css.
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined;
 
     const intervalo = setInterval(() => {
