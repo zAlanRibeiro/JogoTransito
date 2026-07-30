@@ -737,6 +737,7 @@ export default function GameArena() {
           .map((i) => (
             <div
               key={`deco-${i}`}
+              data-calcada-index={i}
               style={{
                 position: 'absolute',
                 width: '100%',
@@ -748,7 +749,7 @@ export default function GameArena() {
                 pointerEvents: 'none'
               }}
             >
-              <SidewalkDecoration />
+              <SidewalkDecoration indice={i} />
             </div>
           ))}
 
