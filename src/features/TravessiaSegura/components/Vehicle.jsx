@@ -100,7 +100,14 @@ export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarr
   // caminho faz o navegador recalcular a posição e o carro saltar. Por isso a
   // `geracao` entra como key mais abaixo: o elemento é remontado e a animação
   // recomeça do zero em vez de herdar o tempo já corrido.
-  const aoFimDaVolta = () => {
+  const aoFimDaVolta = (evento) => {
+    // O giroflex da viatura é outra animação CSS, num filho deste elemento, e
+    // o evento de iteração dela BORBULHA até aqui. Sem este filtro, a cada
+    // 0,7s (o período da piscada) a faixa sorteava um veículo novo: a viatura
+    // aparecia e sumia antes de cruzar a tela, e a furada de sinal dela
+    // terminava no primeiro pisca em vez de no fim da travessia.
+    if (evento.target !== evento.currentTarget) return;
+
     if (furandoSinal) onFimDaFurada?.();
     setVeiculo((atual) => sortearVeiculo(duracaoCarro, atual.geracao + 1));
   };
