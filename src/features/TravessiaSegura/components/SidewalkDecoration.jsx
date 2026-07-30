@@ -33,7 +33,7 @@ const MS_POR_QUADRO = 190;
 const ELEMENTOS = [
   { src: banco, altura: 40, proporcao: 71 / 49 },
   { src: hidrante, altura: 44, proporcao: 43 / 54 },
-  { src: nitbike, altura: 70, proporcao: 88 / 72 },
+  { src: nitbike, altura: 73, proporcao: 88 / 72 },
   { src: pontoOnibus, altura: 72, proporcao: 86 / 55 },
   { quadros: CICLO_POMBO, altura: 20, proporcao: 89 / 82, bicho: true, repetivel: true },
   { quadros: CICLO_CACHORRO, altura: 27, proporcao: 32 / 28, bicho: true, msPorQuadro: 130 },
