@@ -3,6 +3,8 @@ import carroVermelho from '../../../assets/carroVermelho.png';
 import carroAmarelo from '../../../assets/carroAmarelo.png';
 import motoImg from '../../../assets/moto.png';
 import onibusImg from '../../../assets/oc2.png';
+import viaturaImg from '../../../assets/viatura.png';
+import viaturaGiroflexImg from '../../../assets/viatura2.png';
 
 // Cada tipo de veículo carrega sua própria frota de sprites (só o carro tem
 // mais de um, pra variar a cor), a largura visual (vira o "comprimento" do
@@ -24,10 +26,24 @@ import onibusImg from '../../../assets/oc2.png';
 const CARRO = { tipo: 'carro', sprites: [carroVermelho, carroAmarelo], largura: 100, duracaoMultiplicador: 1, topOffset: -17, rotacao: -90 };
 const MOTO = { tipo: 'moto', sprites: [motoImg], largura: 62, duracaoMultiplicador: 0.65, topOffset: -7, rotacao: 90 };
 const ONIBUS = { tipo: 'onibus', sprites: [onibusImg], largura: 130, duracaoMultiplicador: 1.6, topOffset: -102, rotacao: -90 };
+// Viatura da NITTRANS. `spriteGiroflex` é o mesmo desenho com as metades da
+// barra do teto invertidas: os dois quadros ficam empilhados e a opacidade
+// alterna por CSS, sem nenhum timer em JavaScript (ver .giroflex-piscando).
+const VIATURA = {
+  tipo: 'viatura',
+  sprites: [viaturaImg],
+  spriteGiroflex: viaturaGiroflexImg,
+  largura: 85,
+  duracaoMultiplicador: 1.15,
+  // Calibrado medindo no jogo: com -36 o centro dela caía 8px acima do centro
+  // da faixa, enquanto o carro comum ficava exato.
+  topOffset: -28,
+  rotacao: -90,
+};
 
 // Repetir entradas é o jeito simples de pesar o sorteio: 3 chances de
-// carro, 2 de moto, 1 de ônibus.
-const TIPOS_DE_VEICULO = [CARRO, CARRO, CARRO, MOTO, MOTO, ONIBUS];
+// carro, 2 de moto, 1 de ônibus, 1 de viatura.
+const TIPOS_DE_VEICULO = [CARRO, CARRO, CARRO, MOTO, MOTO, ONIBUS, VIATURA];
 
 function sortearTipoDeVeiculo() {
   return TIPOS_DE_VEICULO[Math.floor(Math.random() * TIPOS_DE_VEICULO.length)];
@@ -94,6 +110,17 @@ export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarr
           style={{ width: `${tipoVeiculo.largura}px`, transform: `rotate(${tipoVeiculo.rotacao}deg)` }}
           ref={registerRef}
         />
+        {/* Quadro do giroflex por cima, na mesma geometria. Sem a classe
+            car-image de propósito: quem mede o veículo (radar do guarda,
+            colisão, testes) precisa continuar encontrando um só elemento. */}
+        {tipoVeiculo.spriteGiroflex && (
+          <img
+            src={tipoVeiculo.spriteGiroflex}
+            alt=""
+            className="giroflex-piscando"
+            style={{ width: `${tipoVeiculo.largura}px`, transform: `rotate(${tipoVeiculo.rotacao}deg)` }}
+          />
+        )}
       </div>
     </div>
   );
