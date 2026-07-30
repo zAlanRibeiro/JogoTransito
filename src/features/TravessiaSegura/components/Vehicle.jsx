@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import carroVermelho from '../../../assets/carroVermelho.png';
-import carroAmarelo from '../../../assets/carroAmarelo.png';
+import carroAzul from '../../../assets/carroAzul.png';
+import carroBranco from '../../../assets/carroBranco.png';
+import carroVerde from '../../../assets/carroVerde.png';
+import carroVinho from '../../../assets/carroVinho.png';
 import motoImg from '../../../assets/moto.png';
 import onibusImg from '../../../assets/oc2.png';
 import viaturaImg from '../../../assets/viatura.png';
@@ -23,7 +25,12 @@ import viaturaGiroflexImg from '../../../assets/viatura2.png';
 // andando de costas. +90deg (180deg de diferença) inverte só a frente/trás,
 // sem espelhar a imagem, então não sofre do problema de "perna trocada"
 // que travou a arte do boneco antes.
-const CARRO = { tipo: 'carro', sprites: [carroVermelho, carroAmarelo], largura: 100, duracaoMultiplicador: 1, topOffset: -17, rotacao: -90 };
+// Os quatro carros saem do mesmo recorte (52x91), com o desenho centralizado
+// numa caixa comum. É isso que deixa uma calibragem só valer para todos: os
+// dois carros antigos tinham proporções diferentes (59x70 e 52x70) e
+// dividiam um topOffset, então o amarelo ficava 8px fora do centro da faixa
+// em relação ao vermelho.
+const CARRO = { tipo: 'carro', sprites: [carroAzul, carroBranco, carroVerde, carroVinho], largura: 70, duracaoMultiplicador: 1, topOffset: -11, rotacao: -90 };
 const MOTO = { tipo: 'moto', sprites: [motoImg], largura: 62, duracaoMultiplicador: 0.65, topOffset: -7, rotacao: 90 };
 const ONIBUS = { tipo: 'onibus', sprites: [onibusImg], largura: 130, duracaoMultiplicador: 1.6, topOffset: -102, rotacao: -90 };
 // Viatura da NITTRANS. `spriteGiroflex` é o mesmo desenho com as metades da
