@@ -932,8 +932,20 @@ body {
   max-width: 430px;
   box-sizing: border-box;
   max-height: 92%;
-  overflow-y: auto;
   padding: 16px 22px;
+  /* Anula o -120px do .victory-panel. Aquele deslocamento existe para o
+     painel curto da vitória não cobrir o personagem na arte de fundo; o
+     resumo é bem mais alto e, subindo 120px, saía pelo topo da arena — que
+     tem overflow: hidden. */
+  margin-top: 0;
+  /* Coluna com o miolo rolando sozinho: quem rola é a lista de infrações, não
+     o painel inteiro. Numa partida com infração de todo tipo o painel bate no
+     teto de 92% e, se a rolagem fosse dele, o botão de voltar ao menu ficaria
+     escondido abaixo da dobra — sem nada na tela dizendo que era preciso
+     rolar para encontrá-lo. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .victory-panel.victory-panel--resumo h1 {
@@ -955,6 +967,10 @@ body {
 .victory-panel--resumo .infracoes-resumo {
   margin-bottom: 14px;
   text-align: left;
+  /* min-height: 0 é o que permite este filho encolher dentro do flex e ganhar
+     a própria barra de rolagem; sem ele o conteúdo empurraria o painel. */
+  overflow-y: auto;
+  min-height: 0;
 }
 
 /* --- Feedback Modal (Derrota) --- */
