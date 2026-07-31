@@ -590,6 +590,16 @@ body {
   100% { transform: translateX(800px); }
 }
 
+/* Cone de sinalização da via interditada (src/assets/cone.png, 26x31).
+   Desenhado 1:1 e usado 1:1 de propósito: numa faixa de 100px de altura ele
+   fica na mesma ordem de grandeza do hidrante da calçada, que é o outro
+   objeto pequeno da cena. A sombra é a mesma do emoji que ele substituiu —
+   sem ela o cone flutua sobre o asfalto. */
+.cone-interdicao {
+  width: 26px;
+  filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.5));
+}
+
 /* Giroflex da viatura: o segundo quadro (mesmo desenho, metades da barra
    invertidas) fica empilhado sobre o primeiro e só a opacidade alterna. Sai
    mais barato que trocar o src por temporizador — não custa nem um timer nem
@@ -837,6 +847,31 @@ body {
   background: #fff8e6;
   color: #8a6d00;
   border-left: 2px solid #eef0f4;
+}
+
+/* --- Botão de som, última célula do HUD --- */
+.som-board {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  background: #fff;
+  border: none;
+  border-left: 2px solid #eef0f4;
+  cursor: pointer;
+  /* O HUD inteiro está dentro da arena, que trata toque como "andar": sem
+     isto, o navegador ainda dispararia o realce azul de toque no botão. */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.som-board:hover {
+  background: #f4f6f8;
+}
+
+.som-board:focus-visible {
+  outline: 2px solid var(--nt-orange);
+  outline-offset: -2px;
 }
 
 /* --- Resumo de infrações no modal de Fim de Jogo --- */

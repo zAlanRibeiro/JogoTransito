@@ -1,0 +1,66 @@
+# Publica o jogo no GitHub Pages a cada push na main.
+#
+# O jogo é estático: `npm run build` gera a pasta dist/ e é ela que vai pro ar.
+# Nada aqui roda no servidor — o Pages só serve arquivos.
+#
+# Para funcionar, uma vez só, no navegador:
+#   Settings → Pages → Build and deployment → Source: "GitHub Actions"
+# Sem isso o passo de publicar falha dizendo que o Pages não está habilitado.
+name: Publicar o jogo
+
+on:
+  push:
+    branches: [main]
+  # Permite republicar pelo botão "Run workflow", sem precisar de um commit.
+  workflow_dispatch:
+
+# Permissões que o deploy-pages exige. Sem id-token ele não consegue provar
+# pro GitHub que o artefato veio deste workflow.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Dois pushes seguidos não disputam o mesmo ambiente: o segundo espera, e o
+# que estiver na fila (não o que já está publicando) é descartado.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` em vez de `npm install`: instala exatamente o que está no
+      # package-lock.json, então o que sobe é o mesmo que roda na sua máquina.
+      - run: npm ci
+
+      # Os testes unitários rodam antes do build e seguram a publicação se
+      # algo quebrar — são rápidos (menos de um segundo) e evitam colocar no
+      # ar uma versão com regra de jogo quebrada. Os testes do Playwright
+      # ficam de fora de propósito: precisam baixar um navegador a cada
+      # execução e transformariam um deploy de 1 minuto em vários.
+      - run: npm test
+
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

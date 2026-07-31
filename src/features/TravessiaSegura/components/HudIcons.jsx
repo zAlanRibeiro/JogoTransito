@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Heart, Hourglass, CheckCircle2, AlertTriangle, AlertOctagon, ShieldAlert, ChevronLeft, ChevronRight, Trophy, RotateCcw, Pause, Play, Gamepad2, Home, Smartphone } from 'lucide-react';
+import { Star, Heart, Hourglass, CheckCircle2, AlertTriangle, AlertOctagon, ShieldAlert, ChevronLeft, ChevronRight, Trophy, RotateCcw, Pause, Play, Gamepad2, Home, Smartphone, Volume2, VolumeX } from 'lucide-react';
 
 /* Ícones do HUD — usando lucide-react (npm install lucide-react) em vez de
    emoji ou bitmap pixel a pixel desenhado à mão. Mesma API de antes, então
@@ -70,4 +70,13 @@ export function HomeIcon({ size = 16, color = '#1e3c72', className, style }) {
 
 export function CelularIcon({ size = 48, color = '#ffffff', className, style }) {
   return <Smartphone size={size} color={color} strokeWidth={2} className={className} style={style} />;
+}
+
+// Um ícone só, com dois estados: mostrar sempre o mesmo desenho com um risco
+// a mais/menos deixa claro que é o mesmo botão alternando, e não dois botões
+// diferentes.
+export function SomIcon({ ligado = true, size = 16, className, style }) {
+  const Icone = ligado ? Volume2 : VolumeX;
+  const color = ligado ? '#1e3c72' : '#9aa3ad';
+  return <Icone size={size} color={color} strokeWidth={2.2} className={className} style={style} />;
 }
