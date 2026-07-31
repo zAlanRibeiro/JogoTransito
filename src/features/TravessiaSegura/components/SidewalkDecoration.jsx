@@ -57,7 +57,10 @@ function comLargura(peca) {
 }
 
 const BANCO = comLargura({ src: banco, altura: 40, proporcao: 71 / 49 });
-const HIDRANTE = comLargura({ src: hidrante, altura: 44, proporcao: 43 / 54 });
+// A arte nova já vem no tamanho em que é desenhada (31x44), então a
+// proporção rende largura 31 e o sprite sai 1:1, sem o navegador descartar
+// linha nenhuma. A anterior era 43x54 desenhada a 44 de altura.
+const HIDRANTE = comLargura({ src: hidrante, altura: 44, proporcao: 31 / 44 });
 const NITBIKE = comLargura({ src: nitbike, altura: 73, proporcao: 88 / 72 });
 
 const PONTO_DE_ONIBUS = comLargura({
