@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import TrafficLight from './components/TrafficLight';
+import TrafficLight, { ALTURA_DO_SEMAFORO } from './components/TrafficLight';
 import Vehicle from './components/Vehicle';
 import Pedestrian from './components/Pedestrian';
 import SidewalkDecoration from './components/SidewalkDecoration';
@@ -7,7 +7,7 @@ import AgenteAnimado from './components/AgenteAnimado';
 import usePlayerMovement from './hooks/usePlayerMovement';
 import useGuardSystem, { BONUS_CHAMAR_GUARDA } from './hooks/useGuardSystem';
 import useResponsiveScale from './hooks/useResponsiveScale';
-import useOrientacao, { pedirPaisagem } from './hooks/useOrientacao';
+import { pedirPaisagem } from './hooks/useOrientacao';
 import MainMenu from './components/MainMenu';
 import ComandosModal from './components/ComandosModal';
 import ResumoInfracoes from './components/ResumoInfracoes';
@@ -24,8 +24,11 @@ const BASE_TOP = ARENA_HEIGHT - PLAYER_SCREEN_BOTTOM - (SEGMENT_HEIGHT / 2);
 const RENDER_BEHIND = 3;
 const RENDER_AHEAD = 8;
 
-const TL_HEIGHT = 96;
-const TL_INSET = 8;
+// Onde a base do poste do semáforo encosta, contada a partir do topo do
+// segmento da calçada. Passa dos 100px da calçada de propósito: o poste fica
+// na beira da pista, como na rua. Ancorar pela base é o que permite mudar a
+// altura do sprite sem o poste sair flutuando.
+const BASE_DO_SEMAFORO = 116;
 
 const CHAVE_RECORDE = 'travessiaSegura_recorde';
 
@@ -914,10 +917,10 @@ export default function GameArena() {
         {visible
           .filter((i) => mod3(i) === 0) 
           .map((i) => {
-            const translateY = segmentTop(i, playerY) + SEGMENT_HEIGHT - TL_HEIGHT - TL_INSET;
+            const translateY = segmentTop(i, playerY) + BASE_DO_SEMAFORO - ALTURA_DO_SEMAFORO;
             // A base do poste (onde ele encosta no chão) é o que define a
             // profundidade — não o topo, que fica bem mais alto na tela.
-            const baseDoPosteY = translateY + 120;
+            const baseDoPosteY = translateY + ALTURA_DO_SEMAFORO;
 
             return (
               <div
