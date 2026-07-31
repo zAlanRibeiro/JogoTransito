@@ -7,15 +7,19 @@ import AgenteAnimado from './components/AgenteAnimado';
 import usePlayerMovement from './hooks/usePlayerMovement';
 import useGuardSystem, { BONUS_CHAMAR_GUARDA } from './hooks/useGuardSystem';
 import useResponsiveScale from './hooks/useResponsiveScale';
+import useSom from './hooks/useSom';
+import { tocar } from './audio/sons';
+import { destravarAudio } from './audio/motorDeAudio';
 import { pedirPaisagem } from './hooks/useOrientacao';
 import MainMenu from './components/MainMenu';
 import ComandosModal from './components/ComandosModal';
 import ResumoInfracoes from './components/ResumoInfracoes';
 import { INFRACOES_ZERADAS, totalDeInfracoes } from './infracoes';
-import { StarIcon, HeartIcon, HourglassIcon, CheckIcon, WarningIcon, GraveWarningIcon, InfractionIcon, ArrowLeftIcon, ArrowRightIcon, TrophyIcon, RestartIcon, PauseIcon, PlayIcon, GamepadIcon, HomeIcon } from './components/HudIcons';
+import { StarIcon, HeartIcon, HourglassIcon, CheckIcon, WarningIcon, GraveWarningIcon, InfractionIcon, ArrowLeftIcon, ArrowRightIcon, TrophyIcon, RestartIcon, PauseIcon, PlayIcon, GamepadIcon, HomeIcon, SomIcon } from './components/HudIcons';
 import { SEGMENT_HEIGHT, mod3, segmentType, CROSSWALK_WIDTH, estaNaCalcadaComMargem, crosswalkIndexFor } from './gameGrid';
 import { calcularDificuldade } from './difficulty';
 import { sortearRuaQueFura } from './furarSinal';
+import coneImg from '../../assets/cone.png';
 
 const ARENA_HEIGHT = 400;
 const PLAYER_SCREEN_BOTTOM = 60;
@@ -83,6 +87,7 @@ export default function GameArena() {
   const playerElRef = useRef(null);
   const vehicleElsRef = useRef(new Map());
   const scale = useResponsiveScale(600, 400, { padding: 24, maxScale: 2.6 });
+  const { mudo, alternarMudo } = useSom();
 
   const [lightState, setLightState] = useState('green');
   const [timeLeft, setTimeLeft] = useState(5);
@@ -126,6 +131,9 @@ export default function GameArena() {
   // um aviso mais novo que já tenha tomado o lugar dele.
   const mostrarAviso = useCallback((texto, gravidade) => {
     setAviso({ texto, gravidade });
+    // Os avisos graves só aparecem junto com uma perda de vida, que já tem
+    // som próprio (a batida ou o aviso grave) — tocar aqui também dobraria.
+    if (gravidade === 'leve') tocar('avisoLeve');
     const duracao = gravidade === 'grave' ? 2800 : 2200;
     setTimeout(() => {
       setAviso((atual) => (atual && atual.texto === texto ? null : atual));
@@ -158,6 +166,9 @@ export default function GameArena() {
 
   const handleLoseLife = useCallback((motivo) => {
     registrarInfracao(motivo === 'carro' ? 'carro' : motivo === 'pontos' ? 'pontosZerados' : 'sinalEntrada');
+    // Fora do setVidas: o atualizador pode ser reexecutado pelo React (e é,
+    // duas vezes, no StrictMode), o que faria o som tocar em dobro.
+    tocar(motivo === 'carro' ? 'batida' : 'avisoGrave');
     setVidas((vAtual) => {
       const novasVidas = vAtual - 1;
 
@@ -299,6 +310,11 @@ export default function GameArena() {
         if (foraDaFaixa) {
           registrarInfracao('faixa');
           mostrarAviso('Fora da faixa de pedestres! Pontos pela metade.', 'leve');
+        } else {
+          // Só a travessia limpa ganha o arpejo. Quem saiu da faixa ouve o
+          // aviso de infração no lugar — nunca os dois juntos, senão a
+          // recompensa abafaria a correção.
+          tocar('pontos');
         }
       }
 
@@ -307,6 +323,83 @@ export default function GameArena() {
 
     ultimoTipoSegmentoRef.current = tipoAtual;
   }, [currentIndex, gameState, playerY, registrarInfracao, mostrarAviso]);
+
+  // ---------------------------------------------------------------------
+  // SOM
+  //
+  // Todos os efeitos daqui comparam com uma ref antes de tocar. Não é
+  // preciosismo: no StrictMode o React monta, desmonta e remonta cada
+  // componente, então todo efeito roda duas vezes e o som sairia dobrado.
+  // A ref sobrevive a esse ciclo e o segundo disparo se cala sozinho.
+  // ---------------------------------------------------------------------
+
+  // Mudança de sinal. O jogo mostra o sinal do ponto de vista do PEDESTRE
+  // ("Atravesse" quando está vermelho para os carros), e o som segue a
+  // mesma leitura — senão o áudio ensinaria o contrário do texto na tela.
+  const sinalAnteriorRef = useRef(lightState);
+  useEffect(() => {
+    if (sinalAnteriorRef.current === lightState) return;
+    sinalAnteriorRef.current = lightState;
+    if (gameState !== 'playing') return;
+
+    if (lightState === 'red') tocar('sinalAbre');
+    else if (lightState === 'yellow') tocar('sinalAtencao');
+    else tocar('sinalFecha');
+  }, [lightState, gameState]);
+
+  // Sinal sonoro de travessia: o bip dos semáforos acessíveis, que toca a
+  // cada segundo enquanto dá pra atravessar e apressa nos últimos dois —
+  // exatamente como o da rua. É a peça mais didática do áudio: a criança
+  // associa o som a "pode atravessar" aqui e reconhece na travessia real.
+  const ultimoBipRef = useRef('');
+  useEffect(() => {
+    if (gameState !== 'playing' || pausado || lightState !== 'red') return;
+    // timeLeft se repete a cada ciclo de sinal (5,4,3...), então a chave
+    // precisa do estado junto pra distinguir um ciclo do outro.
+    const chave = `${lightState}-${timeLeft}`;
+    if (ultimoBipRef.current === chave) return;
+    ultimoBipRef.current = chave;
+    if (timeLeft > 0) tocar(timeLeft <= 2 ? 'bipUrgente' : 'bipTravessia');
+  }, [timeLeft, lightState, gameState, pausado]);
+
+  // Passos, no mesmo compasso do ciclo de caminhada do sprite: 4 quadros de
+  // 150ms dão 600ms por ciclo, e um ciclo tem dois passos.
+  useEffect(() => {
+    if (!isWalking || gameState !== 'playing' || pausado) return;
+    tocar('passo');
+    const id = setInterval(() => tocar('passo'), 300);
+    return () => clearInterval(id);
+  }, [isWalking, gameState, pausado]);
+
+  // Buzina do carro que vai furar o sinal — o aviso de que aquela rua não
+  // vai parar, tocado no instante em que ele é sorteado.
+  useEffect(() => {
+    if (ruaQueFura !== null) tocar('buzina');
+  }, [ruaQueFura]);
+
+  // Apito, quando um guarda entra em cena de fato. Amarrado ao número de
+  // guardas ativos, e não ao clique: o botão pode ser apertado sem que
+  // nenhum guarda seja chamado (faixa já atendida, clique repetido).
+  const qtdGuardasRef = useRef(0);
+  useEffect(() => {
+    if (guardasAtivos.length > qtdGuardasRef.current) tocar('apito');
+    qtdGuardasRef.current = guardasAtivos.length;
+  }, [guardasAtivos]);
+
+  // Fim de partida.
+  const fimAnunciadoRef = useRef(null);
+  useEffect(() => {
+    const ehFim = gameState === 'gameover' || gameState === 'won';
+    if (!ehFim) {
+      fimAnunciadoRef.current = null;
+      return;
+    }
+    if (fimAnunciadoRef.current === gameState) return;
+    fimAnunciadoRef.current = gameState;
+    // A vitória entra depois da cutscene; a derrota, logo após a batida que
+    // tirou a última vida, então um respiro evita que os dois se atropelem.
+    setTimeout(() => tocar(gameState === 'won' ? 'vitoria' : 'derrota'), 350);
+  }, [gameState]);
 
   useEffect(() => {
     if (score > prevScoreRef.current) {
@@ -365,6 +458,10 @@ export default function GameArena() {
     setTimeLeft(5);
     setRuaQueFura(null);
     ultimaFuradaRef.current = -Infinity;
+    // Uma partida nova começa no verde: sem zerar isto, a volta de um
+    // gameover que terminou no vermelho soaria como "o sinal fechou".
+    sinalAnteriorRef.current = 'green';
+    ultimoBipRef.current = '';
     setGameState('playing');
     setHasWonOnce(false);
     resetGuardas();
@@ -389,6 +486,8 @@ export default function GameArena() {
     setTimeLeft(5);
     setRuaQueFura(null);
     ultimaFuradaRef.current = -Infinity;
+    sinalAnteriorRef.current = 'green';
+    ultimoBipRef.current = '';
     setHasWonOnce(false);
     setGameState('menu');
     resetGuardas();
@@ -466,6 +565,10 @@ export default function GameArena() {
 
   const handleTouchStart = (e) => {
     if (e && e.button !== undefined && e.button !== 0) return;
+    // Os navegadores só liberam áudio dentro de um gesto do usuário, e uma
+    // aba que volta do segundo plano devolve o contexto suspenso. Como todo
+    // toque na arena passa por aqui, este é o lugar natural de destravar.
+    destravarAudio();
     setIsTouchWalking(true);
   };
   const handleTouchStop = () => setIsTouchWalking(false);
@@ -496,6 +599,10 @@ export default function GameArena() {
           // tela cheia (e, com ela, a trava de orientação) dentro de um gesto
           // do usuário. Falha silenciosa onde não há suporte — ver useOrientacao.
           pedirPaisagem();
+          // Mesmo motivo do pedirPaisagem: é dentro do gesto do usuário que
+          // o navegador libera o áudio.
+          destravarAudio();
+          tocar('clique');
           setGameState('playing');
           restartGame();
         }} />
@@ -515,6 +622,23 @@ export default function GameArena() {
             <InfractionIcon size={15} /> {totalInfracoes}
           </div>
         )}
+        {/* O HUD fica DENTRO da arena, que trata qualquer toque como "andar":
+            sem o stopPropagation, mexer no som faria o jogador sair andando. */}
+        <button
+          type="button"
+          className="som-board"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            destravarAudio();
+            alternarMudo();
+            tocar('clique'); // depois de alternar: ao ligar, confirma que voltou
+          }}
+          aria-label={mudo ? 'Ativar som do jogo' : 'Desativar som do jogo'}
+          title={mudo ? 'Ativar som' : 'Desativar som'}
+        >
+          <SomIcon ligado={!mudo} size={16} />
+        </button>
       </div>
 
       {gameState === 'playing' && (
@@ -668,13 +792,23 @@ export default function GameArena() {
             </div>
 
             <div className="nit-pausa-botoes">
-              <button className="modal-btn nit-btn-com-icone" onClick={() => setPausado(false)} autoFocus>
+              <button
+                className="modal-btn nit-btn-com-icone"
+                onClick={() => {
+                  // Sair da pausa quase sempre significa voltar de outra aba,
+                  // e o navegador devolve o contexto de áudio suspenso.
+                  destravarAudio();
+                  tocar('clique');
+                  setPausado(false);
+                }}
+                autoFocus
+              >
                 <PlayIcon size={14} /> Continuar
               </button>
-              <button className="modal-btn nit-btn-secundario nit-btn-com-icone" onClick={() => setMostrarComandos(true)}>
+              <button className="modal-btn nit-btn-secundario nit-btn-com-icone" onClick={() => { tocar('clique'); setMostrarComandos(true); }}>
                 <GamepadIcon size={15} /> Comandos
               </button>
-              <button className="modal-btn nit-btn-secundario nit-btn-com-icone" onClick={goToMenu}>
+              <button className="modal-btn nit-btn-secundario nit-btn-com-icone" onClick={() => { tocar('clique'); goToMenu(); }}>
                 <HomeIcon size={15} /> Sair para o menu
               </button>
             </div>
@@ -716,7 +850,7 @@ export default function GameArena() {
                 </div>
               </div>
 
-              <button className="modal-btn nit-btn-com-icone" onClick={restartGame} autoFocus>
+              <button className="modal-btn nit-btn-com-icone" onClick={() => { tocar('clique'); restartGame(); }} autoFocus>
                 <RestartIcon size={15} /> Tentar Novamente
               </button>
             </div>
@@ -740,7 +874,7 @@ export default function GameArena() {
                 <StarIcon size={16} /> {score} pontos
               </p>
               <ResumoInfracoes infracoes={infracoes} />
-              <button className="modal-btn nit-btn-com-icone" onClick={goToMenu}>
+              <button className="modal-btn nit-btn-com-icone" onClick={() => { tocar('clique'); goToMenu(); }}>
                 <HomeIcon size={15} color="#ffffff" /> Voltar ao menu
               </button>
             </div>
@@ -751,10 +885,10 @@ export default function GameArena() {
               <h2 style={{ color: 'white', marginBottom: '25px' }}>Pontuação: {score}</h2>
 
               <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-                <button className="modal-btn" onClick={continuePlaying}>
+                <button className="modal-btn" onClick={() => { tocar('clique'); continuePlaying(); }}>
                   CONTINUAR JOGANDO
                 </button>
-                <button className="modal-btn nit-btn-perigo" onClick={() => setMostrarResumoFinal(true)}>
+                <button className="modal-btn nit-btn-perigo" onClick={() => { tocar('clique'); setMostrarResumoFinal(true); }}>
                   ENCERRAR
                 </button>
               </div>
@@ -837,6 +971,11 @@ export default function GameArena() {
             return (
               <React.Fragment key={`rua-group-${i}`}>
                 
+                {/* Os cones que o guarda planta nas duas pontas da rua
+                    interditada. Eram o emoji 🚧, que aparecia diferente em
+                    cada sistema (e no Windows, como uma placa listrada que
+                    nem cone é) e destoava do resto da cena, que é toda
+                    pixel art desenhada pra este jogo. */}
                 {isViaInterditada && (
                   <div style={{
                     position: 'absolute',
@@ -848,12 +987,17 @@ export default function GameArena() {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '0 40px',
+                    // Sem border-box os 40px de padding somam POR FORA dos
+                    // 100%: a caixa vira 680 numa cena de 600 e o cone da
+                    // direita nasce fora da tela. O 🚧 que estava aqui antes
+                    // sofria do mesmo, só que ninguém sente falta de um emoji
+                    // que nunca apareceu.
+                    boxSizing: 'border-box',
                     zIndex: camadaDoSegmento(i, playerY),
-                    fontSize: '28px',
                     pointerEvents: 'none'
                   }}>
-                    <span style={{ filter: 'drop-shadow(2px 2px 2px rgba(0,0,0,0.5))' }}>🚧</span>
-                    <span style={{ filter: 'drop-shadow(2px 2px 2px rgba(0,0,0,0.5))' }}>🚧</span>
+                    <img src={coneImg} alt="" className="cone-interdicao" />
+                    <img src={coneImg} alt="" className="cone-interdicao" />
                   </div>
                 )}
 
