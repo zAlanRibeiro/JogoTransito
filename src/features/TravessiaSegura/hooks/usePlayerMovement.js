@@ -13,6 +13,27 @@ export const DURACAO_RESPAWN_MS = 1400;
 // primeiro toque.
 const PARADO = { frente: false, tras: false, esquerda: false, direita: false };
 
+// Velocidade do jogador em pixels da arena POR SEGUNDO — não por quadro.
+//
+// Era 4px por quadro de requestAnimationFrame, que dispara na taxa de
+// atualização da TELA. Num monitor de 60Hz isso dava 240px/s, que é a
+// velocidade para a qual o jogo foi calibrado (o difficulty.js parte de que
+// atravessar as duas pistas leva cerca de 1s). Só que celular moderno é de
+// 90Hz ou 120Hz: o mesmo código entregava 360 ou 480px/s, e o boneco corria
+// 1,5x a 2x mais rápido que o previsto — enquanto os carros (animação CSS) e
+// o semáforo (setTimeout) continuavam no relógio. Daí a sensação de jogo
+// acelerado só no celular.
+//
+// 240 mantém exatamente o que se via a 60Hz e passa a valer em qualquer tela.
+const VELOCIDADE_POR_SEGUNDO = 240;
+
+// Teto para o intervalo entre quadros. Se a aba trava, volta do segundo
+// plano ou o aparelho engasga, o tempo decorrido pode ser de centenas de
+// milissegundos: sem este limite o passo proporcional teleportaria o boneco
+// dezenas de pixels de uma vez, atravessando um carro sem que o radar de
+// colisão — que só olha a posição de cada quadro — chegasse a vê-lo.
+const MAIOR_PASSO_EM_SEGUNDOS = 0.05;
+
 // WASD e as setas fazem a mesma coisa: quem não tem costume de jogar no
 // computador procura as setas primeiro. Um Map (e não um objeto) porque a
 // chave vem de e.key, que pode ser qualquer string — inclusive nomes de
@@ -91,7 +112,18 @@ export default function usePlayerMovement(toqueRef, lightState, onLoseLife, isGa
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
+    // Instante do quadro anterior, para medir quanto tempo passou de fato.
+    let instanteAnterior = performance.now();
+
     const loop = () => {
+      // Atualizado ANTES de qualquer saída antecipada: se ficasse só no
+      // caminho em que o jogador anda, uma pausa (ou o respawn logo abaixo)
+      // acumularia tempo parado e o primeiro quadro depois dela daria um
+      // salto.
+      const instante = performance.now();
+      const decorrido = Math.min((instante - instanteAnterior) / 1000, MAIOR_PASSO_EM_SEGUNDOS);
+      instanteAnterior = instante;
+
       if (isGameOver) {
         setIsWalking(false);
         animationFrame = requestAnimationFrame(loop);
@@ -114,7 +146,7 @@ export default function usePlayerMovement(toqueRef, lightState, onLoseLife, isGa
 
       let dx = 0;
       let dy = 0;
-      const speed = 4;
+      const speed = VELOCIDADE_POR_SEGUNDO * decorrido;
 
       const toque = toqueRef?.current ?? PARADO;
       const querAndarFrente = acoes.frente || toque.frente;
