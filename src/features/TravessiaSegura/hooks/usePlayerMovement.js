@@ -24,8 +24,9 @@ const TECLAS_DE_MOVIMENTO = new Map([
   ['arrowright', 'direita'],
 ]);
 
-export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife, isGameOver, playerElRef, vehicleElsRef, scale = 1, isTouchLeft = false, isTouchRight = false) {
-  const posRef = useRef({ x: 300, y: 0 });
+export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife, isGameOver, playerElRef, vehicleElsRef, scale = 1, isTouchLeft = false, isTouchRight = false, larguraDaArena = 600) {
+  // O jogador nasce no meio da arena, seja qual for a largura dela.
+  const posRef = useRef({ x: larguraDaArena / 2, y: 0 });
   const [position, setPosition] = useState(posRef.current);
   const [isWalking, setIsWalking] = useState(false);
   const [isRespawning, setIsRespawning] = useState(false);
@@ -48,14 +49,18 @@ export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife
   // é perdida, qualquer que seja o motivo (carro, sinal ou pontos zerados).
   const respawnNaCalcada = useCallback(() => {
     posRef.current = {
-      x: 300,
+      x: larguraDaArena / 2,
       y: Math.floor(posRef.current.y / CYCLE_LENGTH) * CYCLE_LENGTH,
     };
     setPosition(posRef.current);
     invulneravelAteRef.current = Date.now() + DURACAO_RESPAWN_MS;
     respawnAtivoRef.current = true;
     setIsRespawning(true);
-  }, []);
+    // larguraDaArena entra na lista porque o respawn passou a devolver o
+    // jogador ao meio da arena, e o meio depende dela. Sem a dependência,
+    // girar o aparelho no meio da partida faria o próximo respawn usar a
+    // largura antiga e o boneco reapareceria fora do centro.
+  }, [larguraDaArena]);
 
   useEffect(() => {
     const acoes = { frente: false, tras: false, esquerda: false, direita: false };
@@ -136,7 +141,10 @@ export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife
       if (acoes.esquerda || isTouchLeft) dx = -speed;
       if (acoes.direita || isTouchRight) dx = speed;
 
-      let nextX = Math.max(30, Math.min(570, posRef.current.x + dx));
+      // A margem de 30px vale dos dois lados; o limite direito acompanha a
+      // largura da arena em vez do 570 fixo, que prendia o jogador ao
+      // primeiro terço de uma tela larga.
+      let nextX = Math.max(30, Math.min(larguraDaArena - 30, posRef.current.x + dx));
 
       // Andar pra trás só é permitido dentro da própria cena atual (a
       // calçada ou rua em que o jogador já está) — não dá pra recuar pra
@@ -219,7 +227,7 @@ export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife
       window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(animationFrame);
     };
-  }, [isTouchWalking, lightState, onLoseLife, isGameOver, playerElRef, vehicleElsRef, scale, isTouchLeft, isTouchRight]);
+  }, [isTouchWalking, lightState, onLoseLife, isGameOver, playerElRef, vehicleElsRef, scale, isTouchLeft, isTouchRight, larguraDaArena]);
 
   return { position, isWalking, isRespawning, resetPosition, respawnNaCalcada };
 }

@@ -6,7 +6,7 @@ import SidewalkDecoration from './components/SidewalkDecoration';
 import AgenteAnimado from './components/AgenteAnimado';
 import usePlayerMovement from './hooks/usePlayerMovement';
 import useGuardSystem, { BONUS_CHAMAR_GUARDA } from './hooks/useGuardSystem';
-import useResponsiveScale from './hooks/useResponsiveScale';
+import useArenaResponsiva from './hooks/useArenaResponsiva';
 import useSom from './hooks/useSom';
 import { tocar } from './audio/sons';
 import { destravarAudio } from './audio/motorDeAudio';
@@ -86,7 +86,12 @@ export default function GameArena() {
   const arenaRef = useRef(null);
   const playerElRef = useRef(null);
   const vehicleElsRef = useRef(new Map());
-  const scale = useResponsiveScale(600, 400, { padding: 24, maxScale: 2.6 });
+  // A largura da arena acompanha a proporção da tela; a altura é fixa,
+  // porque é dela que sai o sistema de coordenadas do jogo.
+  const { largura: larguraDaArena, escala: scale } = useArenaResponsiva(ARENA_HEIGHT, {
+    padding: 24,
+    maxScale: 2.6,
+  });
   const { mudo, alternarMudo } = useSom();
 
   const [lightState, setLightState] = useState('green');
@@ -202,7 +207,8 @@ export default function GameArena() {
     vehicleElsRef,
     scale,
     isTouchLeft,
-    isTouchRight
+    isTouchRight,
+    larguraDaArena
   );
   respawnRef.current = respawnNaCalcada;
 
@@ -227,7 +233,12 @@ export default function GameArena() {
   const saiuDaFaixaRef = useRef(false);
   if (
     segmentType(Math.floor(playerY / SEGMENT_HEIGHT)) === 'rua' &&
-    Math.abs(playerX - 300) > CROSSWALK_WIDTH / 2 &&
+    // O centro é o da arena ATUAL, não o 300 fixo de quando ela media 600.
+    // A faixa de pedestre é desenhada em left:50%, então numa arena mais
+    // larga o 300 apontava para um pedaço qualquer do asfalto: o jogador
+    // atravessava em cima da faixa e mesmo assim era marcado como fora dela,
+    // levando infração e metade dos pontos.
+    Math.abs(playerX - larguraDaArena / 2) > CROSSWALK_WIDTH / 2 &&
     faixasComCarroParado.length === 0
   ) {
     saiuDaFaixaRef.current = true;
@@ -588,9 +599,20 @@ export default function GameArena() {
         // App.css). O zoom escala o layout, então cada sprite é rasterizado
         // já no tamanho final.
         zoom: scale,
+        // A largura é a que o hook calculou; a fixa de 600px saiu do CSS.
+        width: `${larguraDaArena}px`,
+        // Lido pelo @keyframes drive: é onde o veículo termina a travessia,
+        // 50px além da borda direita (o elemento nasce em left:-150px, daí
+        // os 200 de folga). Sem acompanhar a largura, numa arena mais larga
+        // o carro sumia antes de chegar ao outro lado.
+        '--drive-fim': `${larguraDaArena + 200}px`,
       }}
       onPointerDown={handleTouchStart}
       onPointerUp={handleTouchStop}
+      // Mesmo motivo das zonas laterais: sem tratar o cancel, um toque
+      // interrompido pelo sistema deixava o jogador andando para sempre —
+      // direto para debaixo do primeiro carro.
+      onPointerCancel={handleTouchStop}
       onPointerLeave={handleTouchStop}
       // O Chrome do Android não respeita -webkit-touch-callout: o único jeito
       // de impedir o menu de "baixar / compartilhar imagem" no toque longo é
@@ -691,13 +713,19 @@ export default function GameArena() {
           }}
           style={{
             position: 'absolute',
-            bottom: '150px',
+            // Encostado no topo, logo abaixo da faixa do HUD, e NÃO no meio da
+            // tela como antes (bottom: 150px). Ali ele cobria a faixa de
+            // pedestre e uma pista inteira — justo o pedaço que o jogador
+            // precisa enxergar pra decidir se atravessa. E no celular ficava
+            // ainda por cima na altura do polegar.
+            top: '48px',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 100,
             backgroundColor: '#e67e22',
-            fontSize: '14px',
-            padding: '10px 20px',
+            fontSize: '13px',
+            padding: '7px 14px',
+            whiteSpace: 'nowrap',
             border: '2px solid white',
             boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
             animation: 'pulse 1s infinite'
@@ -707,60 +735,41 @@ export default function GameArena() {
         </button>
       )}
 
-      {/* --- CONTROLE LATERAL NO TOQUE (esquerda/direita) --- */}
+      {/* --- CONTROLE LATERAL NO TOQUE (esquerda/direita) ---
+          Faixas verticais inteiras, não os círculos de 52px de antes: o alvo
+          real chegava ao dedo com 38px nos aparelhos menores. O círculo
+          continua ali, agora só como dica visual (ver .zona-toque no CSS).
+
+          O stopPropagation é o que mantém as ações exclusivas: sem ele o
+          toque bubbla até a arena e o jogador andaria de lado E para a
+          frente ao mesmo tempo — indo parar embaixo do carro do qual estava
+          justamente tentando desviar.
+
+          onPointerCancel junto com onPointerUp: quando o sistema toma o
+          toque (uma notificação, uma chamada, o gesto de voltar do Android),
+          o pointerup NUNCA chega. Sem tratar o cancel, o jogador ficava
+          andando de lado sozinho até tocar a tela de novo. */}
       {ehDispositivoDeToque && gameState === 'playing' && (
         <>
           <button
+            className="zona-toque zona-toque-esquerda"
             aria-label="Andar para a esquerda"
             onPointerDown={(e) => { e.stopPropagation(); setIsTouchLeft(true); }}
             onPointerUp={(e) => { e.stopPropagation(); setIsTouchLeft(false); }}
+            onPointerCancel={(e) => { e.stopPropagation(); setIsTouchLeft(false); }}
             onPointerLeave={(e) => { e.stopPropagation(); setIsTouchLeft(false); }}
-            style={{
-              position: 'absolute',
-              bottom: '20px',
-              left: '20px',
-              zIndex: 100,
-              width: '52px',
-              height: '52px',
-              borderRadius: '50%',
-              border: '2px solid rgba(255,255,255,0.7)',
-              background: 'rgba(30,60,114,0.55)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 0,
-              cursor: 'pointer',
-              touchAction: 'none',
-              WebkitTapHighlightColor: 'transparent'
-            }}
           >
-            <ArrowLeftIcon size={28} />
+            <span className="dica"><ArrowLeftIcon size={28} /></span>
           </button>
           <button
+            className="zona-toque zona-toque-direita"
             aria-label="Andar para a direita"
             onPointerDown={(e) => { e.stopPropagation(); setIsTouchRight(true); }}
             onPointerUp={(e) => { e.stopPropagation(); setIsTouchRight(false); }}
+            onPointerCancel={(e) => { e.stopPropagation(); setIsTouchRight(false); }}
             onPointerLeave={(e) => { e.stopPropagation(); setIsTouchRight(false); }}
-            style={{
-              position: 'absolute',
-              bottom: '20px',
-              right: '20px',
-              zIndex: 100,
-              width: '52px',
-              height: '52px',
-              borderRadius: '50%',
-              border: '2px solid rgba(255,255,255,0.7)',
-              background: 'rgba(30,60,114,0.55)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 0,
-              cursor: 'pointer',
-              touchAction: 'none',
-              WebkitTapHighlightColor: 'transparent'
-            }}
           >
-            <ArrowRightIcon size={28} />
+            <span className="dica"><ArrowRightIcon size={28} /></span>
           </button>
         </>
       )}
@@ -944,7 +953,7 @@ export default function GameArena() {
                 pointerEvents: 'none'
               }}
             >
-              <SidewalkDecoration indice={i} />
+              <SidewalkDecoration indice={i} larguraDaArena={larguraDaArena} />
             </div>
           ))}
 
@@ -1058,6 +1067,7 @@ export default function GameArena() {
                       laneIndex={i}
                       vehicleElsRef={vehicleElsRef}
                       arenaRef={arenaRef}
+                      larguraDaArena={larguraDaArena}
                     />
                   </div>
                 )}

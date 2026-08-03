@@ -108,7 +108,10 @@ export async function pararVeiculoSobreAFaixa(page, faixa) {
     if (!container) throw new Error(`faixa ${indice} não está renderizada`);
     const veiculo = container.querySelector('.vehicle');
     const arena = document.querySelector('.game-arena').getBoundingClientRect();
-    const escala = arena.width / 600;
+    // A escala sai do zoom da arena, e nao mais de largura/600: a largura
+    // deixou de ser fixa (useArenaResponsiva) e a conta antiga passou a dar
+    // um fator errado, jogando o carro para fora da faixa.
+    const escala = Number(getComputedStyle(document.querySelector('.game-arena')).zoom) || 1;
     const centroDaArena = arena.left + arena.width / 2;
     veiculo.style.setProperty('animation', 'none', 'important');
     // Zera qualquer deslocamento anterior antes de medir: o transform final
