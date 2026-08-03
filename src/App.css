@@ -634,16 +634,18 @@ body {
    abaixo dos 44-48px que Apple e Material recomendam — porque o tamanho era
    fixo em coordenadas da arena e o zoom da arena encolhia junto.
 
-   Agora o BOTÃO é uma faixa vertical inteira, e o círculo é só a dica visual
-   dentro dele. O alvo real passa de ~40px para um quarto da largura da tela,
-   de cima a baixo. Continua sendo um <button> de verdade, com aria-label,
-   em vez de uma <div> com handler.
+   O botão agora é um QUADRANTE: um quarto da largura, e só a METADE DE BAIXO
+   da altura. É onde o polegar descansa quando se segura o aparelho deitado.
 
-   25% de cada lado, e não um terço: andar para a FRENTE é a ação principal e
-   fica com a metade central, que é onde o polegar naturalmente cai. */
+   Essa divisão veio de uso real. Antes a faixa lateral ia de cima a baixo, e
+   como só o círculo de 45px era visível, os outros 165px da faixa eram
+   invisíveis: encostar ali "não andava para a frente" sem nenhum motivo
+   aparente. Com o corte na metade, tudo que está acima da linha do polegar
+   anda para a frente — inclusive nas beiradas — e andar de lado fica onde a
+   mão já está. */
 .zona-toque {
   position: absolute;
-  top: 0;
+  top: 50%;
   bottom: 0;
   width: 25%;
   z-index: 50;
