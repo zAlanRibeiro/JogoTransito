@@ -9,6 +9,10 @@ const REFERENCE_SCALE = 1.4;
 // seguinte (ainda encostado no carro) e perdia várias vidas de uma vez.
 export const DURACAO_RESPAWN_MS = 1400;
 
+// Direção neutra, usada quando não há joystick (computador) ou antes do
+// primeiro toque.
+const PARADO = { frente: false, tras: false, esquerda: false, direita: false };
+
 // WASD e as setas fazem a mesma coisa: quem não tem costume de jogar no
 // computador procura as setas primeiro. Um Map (e não um objeto) porque a
 // chave vem de e.key, que pode ser qualquer string — inclusive nomes de
@@ -24,7 +28,13 @@ const TECLAS_DE_MOVIMENTO = new Map([
   ['arrowright', 'direita'],
 ]);
 
-export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife, isGameOver, playerElRef, vehicleElsRef, scale = 1, isTouchLeft = false, isTouchRight = false, larguraDaArena = 600) {
+// `toqueRef` carrega a direção do joystick: { frente, tras, esquerda,
+// direita }. É uma REF, e não três booleanos de estado como antes, por dois
+// motivos. O joystick muda dezenas de vezes por segundo enquanto o dedo se
+// arrasta, e cada mudança de estado remontaria este efeito inteiro —
+// derrubando os listeners de teclado e reiniciando o requestAnimationFrame.
+// Numa ref, o laço lê o valor mais recente sem que nada precise reexecutar.
+export default function usePlayerMovement(toqueRef, lightState, onLoseLife, isGameOver, playerElRef, vehicleElsRef, scale = 1, larguraDaArena = 600) {
   // O jogador nasce no meio da arena, seja qual for a largura dela.
   const posRef = useRef({ x: larguraDaArena / 2, y: 0 });
   const [position, setPosition] = useState(posRef.current);
@@ -106,7 +116,8 @@ export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife
       let dy = 0;
       const speed = 4;
 
-      const querAndarFrente = acoes.frente || isTouchWalking;
+      const toque = toqueRef?.current ?? PARADO;
+      const querAndarFrente = acoes.frente || toque.frente;
       const currentY = posRef.current.y;
 
       if (querAndarFrente) {
@@ -137,9 +148,9 @@ export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife
         }
       }
 
-      if (acoes.tras) dy = -speed;
-      if (acoes.esquerda || isTouchLeft) dx = -speed;
-      if (acoes.direita || isTouchRight) dx = speed;
+      if (acoes.tras || toque.tras) dy = -speed;
+      if (acoes.esquerda || toque.esquerda) dx = -speed;
+      if (acoes.direita || toque.direita) dx = speed;
 
       // A margem de 30px vale dos dois lados; o limite direito acompanha a
       // largura da arena em vez do 570 fixo, que prendia o jogador ao
@@ -207,7 +218,9 @@ export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife
       }
 
       const estaMovendo =
-        querAndarFrente || acoes.tras || acoes.esquerda || acoes.direita || isTouchLeft || isTouchRight;
+        querAndarFrente ||
+        acoes.tras || acoes.esquerda || acoes.direita ||
+        toque.tras || toque.esquerda || toque.direita;
 
       if (estaMovendo) {
         posRef.current = { x: nextX, y: nextY };
@@ -227,7 +240,7 @@ export default function usePlayerMovement(isTouchWalking, lightState, onLoseLife
       window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(animationFrame);
     };
-  }, [isTouchWalking, lightState, onLoseLife, isGameOver, playerElRef, vehicleElsRef, scale, isTouchLeft, isTouchRight, larguraDaArena]);
+  }, [toqueRef, lightState, onLoseLife, isGameOver, playerElRef, vehicleElsRef, scale, larguraDaArena]);
 
   return { position, isWalking, isRespawning, resetPosition, respawnNaCalcada };
 }

@@ -52,12 +52,12 @@ export default function ComandosModal({ onClose, zIndex }) {
           <div className="nit-comandos-lista">
             <h4>Toque (celular/tablet)</h4>
             <div className="nit-comando-linha">
-              <span className="nit-tecla-icone">👆</span>
-              <span>Segurar a tela — andar para frente</span>
+              <span className="nit-tecla-icone">🕹️</span>
+              <span>Joystick no canto inferior esquerdo — andar em qualquer direção</span>
             </div>
             <div className="nit-comando-linha">
-              <span className="nit-tecla-icone">◀▶</span>
-              <span>Botões no canto inferior — mover para os lados</span>
+              <span className="nit-tecla-icone">↩️</span>
+              <span>Puxe o joystick para baixo para recuar até a calçada</span>
             </div>
             <div className="nit-comando-linha">
               <span className="nit-tecla-icone">🚨</span>
