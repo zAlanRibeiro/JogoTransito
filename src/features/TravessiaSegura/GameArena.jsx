@@ -1007,6 +1007,7 @@ export default function GameArena() {
                     onFimDaFurada={() => setRuaQueFura(null)}
                     seed={i}
                     duracaoCarro={dificuldade.duracaoCarro}
+                    larguraDaArena={larguraDaArena}
                     registerRef={(el) => {
                       if (el) vehicleElsRef.current.set(i, el);
                       else vehicleElsRef.current.delete(i);

@@ -56,27 +56,54 @@ function sortearTipoDeVeiculo() {
   return TIPOS_DE_VEICULO[Math.floor(Math.random() * TIPOS_DE_VEICULO.length)];
 }
 
+// Quanto o veículo percorre de ponta a ponta, em coordenadas da arena: ele
+// nasce em left:-150px e a animação `drive` o leva de translateX(-150px) até
+// (largura + 200px) — ou seja, de -300 até largura+50.
+const varreduraDaTravessia = (larguraDaArena) => larguraDaArena + 350;
+
+// A varredura de referência, de quando a arena tinha 600px fixos de largura.
+// É nela que a duração do difficulty.js foi calibrada.
+const VARREDURA_DE_REFERENCIA = varreduraDaTravessia(600);
+
+// A duração acompanha a LARGURA da arena, e não é mais o valor cru do
+// difficulty.js.
+//
+// Desde que a arena passou a ter largura elástica, o mesmo tempo cobria
+// distâncias diferentes: num celular deitado a varredura é de 1349px contra
+// 997 no desktop. Medido, o carro andava a 356px/s no celular e 250 no
+// computador — 1,48x contra 1,04x a velocidade do jogador, que é fixa em
+// 240px/s. O trânsito ficava 42% mais rápido em relação a quem atravessa, e
+// só no celular.
+//
+// Esticando a duração na mesma proporção, o carro volta a andar sempre a
+// ~238px/s em qualquer tela. O efeito colateral é que numa tela larga cada
+// veículo demora mais para dar a volta, então passa um pouco menos carro por
+// minuto — um trânsito mais espaçado, porém na velocidade certa, que é o que
+// o jogo precisa para ensinar a julgar quando dá para atravessar.
+const duracaoParaALargura = (duracaoBase, larguraDaArena) =>
+  duracaoBase * (varreduraDaTravessia(larguraDaArena) / VARREDURA_DE_REFERENCIA);
+
 // Cada passagem é um veículo novo: tipo, sprite e duração sorteados de uma
 // vez. A duração é congelada aqui, e não lida a cada render, porque a
 // dificuldade muda `duracaoCarro` no meio da partida — trocar a duração de
 // uma animação CSS em andamento faz o navegador recalcular a posição na hora,
 // e o carro salta na pista.
-function sortearVeiculo(duracaoCarro, geracao) {
+function sortearVeiculo(duracaoCarro, geracao, larguraDaArena) {
   const tipo = sortearTipoDeVeiculo();
   return {
     tipo,
     sprite: tipo.sprites[Math.floor(Math.random() * tipo.sprites.length)],
-    duracao: duracaoCarro * tipo.duracaoMultiplicador,
+    duracao: duracaoParaALargura(duracaoCarro * tipo.duracaoMultiplicador, larguraDaArena),
     geracao,
   };
 }
 
-export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarro = 4, furandoSinal = false, onFimDaFurada }) {
+export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarro = 4, furandoSinal = false, onFimDaFurada, larguraDaArena = 600 }) {
   // Sorteado de verdade, e não derivado do índice da faixa: com
   // `seed % 6` a sequência era sempre carro, carro, moto, ônibus,
   // repetindo a cada duas travessias — o jogador decorava o trajeto e a
   // variedade de veículos não mudava nada na prática.
-  const [veiculo, setVeiculo] = useState(() => sortearVeiculo(duracaoCarro, 0));
+  const [veiculo, setVeiculo] = useState(() => sortearVeiculo(duracaoCarro, 0, larguraDaArena));
   const tipoVeiculo = veiculo.tipo;
 
   // `furandoSinal` mantém este veículo andando com o sinal fechado — mas só
@@ -109,7 +136,7 @@ export default function Vehicle({ lightState, seed = 0, registerRef, duracaoCarr
     if (evento.target !== evento.currentTarget) return;
 
     if (furandoSinal) onFimDaFurada?.();
-    setVeiculo((atual) => sortearVeiculo(duracaoCarro, atual.geracao + 1));
+    setVeiculo((atual) => sortearVeiculo(duracaoCarro, atual.geracao + 1, larguraDaArena));
   };
 
   return (

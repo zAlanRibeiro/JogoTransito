@@ -57,3 +57,58 @@ test('o jogador anda na mesma velocidade na taxa normal da tela', async ({ page 
   expect(velocidade).toBeGreaterThan(VELOCIDADE_ESPERADA * 0.75);
   expect(velocidade).toBeLessThan(VELOCIDADE_ESPERADA * 1.25);
 });
+
+// --- Velocidade do trânsito ---------------------------------------------
+//
+// A arena tem largura elástica: 999px num celular deitado, 647 num desktop
+// de 1280. A animação `drive` leva o veículo de -300 até largura+50, então a
+// distância percorrida muda junto — e, com a duração crua do difficulty.js,
+// o mesmo tempo cobria distâncias diferentes. Medido antes da correção: o
+// carro andava a 356px/s no celular contra 250 no desktop, ou seja, 1,48x
+// contra 1,04x a velocidade do jogador. O trânsito ficava 42% mais rápido em
+// relação a quem atravessa, e só no celular.
+//
+// Cada tipo tem a sua velocidade (a moto é a mais rápida, o ônibus a mais
+// lenta), mas o CONJUNTO precisa ser o mesmo em qualquer tela.
+const VELOCIDADES_DE_REFERENCIA = [
+  950 / (4 * 1.6),  // ônibus  ~148 px/s
+  950 / (4 * 1.15), // viatura ~207
+  950 / (4 * 1),    // carro   ~238
+  950 / (4 * 0.65), // moto    ~365
+];
+
+async function velocidadesDosVeiculos(page) {
+  await page.goto('/');
+  await page.getByText('INICIAR JOGO').click();
+  await page.locator('.scoreboard').waitFor();
+  // Sinal fechado para o pedestre é sinal aberto para os carros.
+  await page.locator('.signal-badge', { hasText: 'Espere' }).waitFor({ timeout: 20_000 });
+  await page.waitForTimeout(400);
+  return page.evaluate(() => {
+    const arena = document.querySelector('.game-arena');
+    const varredura = parseFloat(arena.style.width) + 350;
+    return [...document.querySelectorAll('.car-container .vehicle')].map(
+      (v) => varredura / parseFloat(getComputedStyle(v).animationDuration)
+    );
+  });
+}
+
+for (const [nome, viewport] of [
+  ['celular deitado', { width: 863, height: 400 }],
+  ['desktop', { width: 1280, height: 800 }],
+]) {
+  test(`os veículos andam na velocidade de referência em ${nome}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    const observadas = await velocidadesDosVeiculos(page);
+    console.log(`${nome}: ${observadas.map((v) => v.toFixed(0)).join(', ')} px/s`);
+
+    expect(observadas.length).toBeGreaterThan(0);
+    for (const velocidade of observadas) {
+      const maisProxima = VELOCIDADES_DE_REFERENCIA.reduce((a, b) =>
+        Math.abs(b - velocidade) < Math.abs(a - velocidade) ? b : a
+      );
+      // 2% de folga cobre o arredondamento da duração lida do CSS.
+      expect(Math.abs(velocidade - maisProxima) / maisProxima).toBeLessThan(0.02);
+    }
+  });
+}
