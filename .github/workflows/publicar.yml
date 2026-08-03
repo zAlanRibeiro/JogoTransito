@@ -31,16 +31,28 @@ jobs:
   construir:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
-      # `npm ci` em vez de `npm install`: instala exatamente o que está no
-      # package-lock.json, então o que sobe é o mesmo que roda na sua máquina.
-      - run: npm ci
+      # `npm install`, e NÃO `npm ci` — isto não é preferência, é o que faz o
+      # build funcionar aqui.
+      #
+      # O Vite 8 usa o rolldown, que tem um binário compilado por plataforma
+      # (@rolldown/binding-linux-x64-gnu, -win32-x64-msvc, e mais treze). O
+      # npm só grava no package-lock.json o binário da máquina onde o lock foi
+      # gerado — e este foi gerado no Windows. Como `npm ci` instala
+      # estritamente o que está no lock, no Ubuntu daqui o binário de Linux
+      # nunca chegava e o vitest morria ao iniciar, com um "exit code 1" sem
+      # explicação. Foi exatamente assim que a primeira publicação falhou.
+      #
+      # `npm install` re-resolve as dependências opcionais para o SO atual e
+      # baixa o binário certo. As versões continuam vindo do lock; o que muda
+      # é só a escolha do binário nativo.
+      - run: npm install
 
       # Os testes unitários rodam antes do build e seguram a publicação se
       # algo quebrar — são rápidos (menos de um segundo) e evitam colocar no
