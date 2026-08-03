@@ -592,6 +592,13 @@ export default function GameArena() {
       onPointerDown={handleTouchStart}
       onPointerUp={handleTouchStop}
       onPointerLeave={handleTouchStop}
+      // O Chrome do Android não respeita -webkit-touch-callout: o único jeito
+      // de impedir o menu de "baixar / compartilhar imagem" no toque longo é
+      // barrar o evento aqui. Como andar É segurar a tela, sem isto o menu
+      // abria por cima do jogo toda vez que o jogador andava um pouco mais.
+      // No desktop isso também tira o menu do botão direito dentro da arena,
+      // o que é o esperado num jogo.
+      onContextMenu={(evento) => evento.preventDefault()}
     >
       {gameState === 'menu' && (
         <MainMenu onStartGame={() => {
