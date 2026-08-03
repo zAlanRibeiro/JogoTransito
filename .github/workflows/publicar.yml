@@ -38,21 +38,35 @@ jobs:
           node-version: 22
           cache: npm
 
-      # `npm install`, e NÃO `npm ci` — isto não é preferência, é o que faz o
-      # build funcionar aqui.
+      # O package-lock.json é APAGADO de propósito antes de instalar. Isto não
+      # é desleixo — é a única saída, e é a que o próprio erro recomenda.
       #
       # O Vite 8 usa o rolldown, que tem um binário compilado por plataforma
-      # (@rolldown/binding-linux-x64-gnu, -win32-x64-msvc, e mais treze). O
-      # npm só grava no package-lock.json o binário da máquina onde o lock foi
-      # gerado — e este foi gerado no Windows. Como `npm ci` instala
-      # estritamente o que está no lock, no Ubuntu daqui o binário de Linux
-      # nunca chegava e o vitest morria ao iniciar, com um "exit code 1" sem
-      # explicação. Foi exatamente assim que a primeira publicação falhou.
+      # (@rolldown/binding-linux-x64-gnu, -win32-x64-msvc, e mais treze). O npm
+      # só grava no lock o binário da máquina onde o lock foi gerado, e este
+      # foi gerado no Windows: ele tem o -win32-x64-msvc e NENHUM de Linux.
+      # Rodando no Ubuntu, o vitest morre na partida com
       #
-      # `npm install` re-resolve as dependências opcionais para o SO atual e
-      # baixa o binário certo. As versões continuam vindo do lock; o que muda
-      # é só a escolha do binário nativo.
-      - run: npm install
+      #     Cannot find module '@rolldown/binding-linux-x64-gnu'
+      #     npm has a bug related to optional dependencies (npm/cli#4828)
+      #     Please try `npm i` again after removing both package-lock.json
+      #     and node_modules directory.
+      #
+      # Nem `npm ci` nem `npm install` resolvem sozinhos: com o lock presente,
+      # o npm considera a árvore satisfeita e não vai atrás do que falta. E o
+      # lock não tem conserto a partir do Windows — `--package-lock-only`,
+      # `--os=linux --cpu=x64` e `--force` continuam gravando só o binário
+      # local.
+      #
+      # O custo é perder a fixação exata de versões nesta instalação: as
+      # dependências passam a resolver dentro das faixas do package.json. O
+      # `npm test` logo abaixo é a rede de proteção — se alguma versão nova
+      # quebrar algo, a publicação para e o site continua servindo a última
+      # versão boa.
+      #
+      # Para recuperar o `npm ci`, basta gerar o lock uma vez em Linux (WSL ou
+      # Codespaces) e commitá-lo: aí ele terá o binário que falta.
+      - run: rm -f package-lock.json && npm install
 
       # Os testes unitários rodam antes do build e seguram a publicação se
       # algo quebrar — são rápidos (menos de um segundo) e evitam colocar no
