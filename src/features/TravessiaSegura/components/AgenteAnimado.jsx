@@ -74,6 +74,17 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
   // primeira pintura, senão o navegador chega a desenhar o guarda no lado
   // errado por um quadro.
   const alvoXRef = useRef(POSICAO_PADRAO);
+
+  // A largura da arena muda quando a janela é redimensionada, e o intervalo
+  // da animação precisa da largura ATUAL para saber onde o guarda já saiu de
+  // cena. Numa ref, e não na lista de dependências: pôr `larguraDaArena` nas
+  // dependências recriaria o intervalo a cada pixel arrastado, reiniciando a
+  // caminhada do guarda no meio do percurso.
+  const larguraDaArenaRef = useRef(larguraDaArena);
+  useEffect(() => {
+    larguraDaArenaRef.current = larguraDaArena;
+  }, [larguraDaArena]);
+
   useLayoutEffect(() => {
     const carEl = vehicleElsRef?.current?.get(laneIndex);
     const arenaEl = arenaRef?.current;
@@ -157,7 +168,7 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
         setPosicaoX((x) => {
           // Vai embora pelo mesmo lado por onde chegou.
           const saiu =
-            direcaoRef.current === 1 ? x <= -60 : x >= larguraDaArena + 60;
+            direcaoRef.current === 1 ? x <= -60 : x >= larguraDaArenaRef.current + 60;
           if (saiu) {
             if (onCompleteRef.current) {
               onCompleteRef.current();

@@ -21,6 +21,11 @@ export const BONUS_CHAMAR_GUARDA = 5;
 // cena), então podem sair da lista de já-atendidas em vez de crescer sem
 // limite durante uma partida longa.
 const FAIXAS_ATRAS_A_MANTER = 6;
+
+// Sempre o MESMO array vazio. `[]` novo a cada vez tem identidade diferente e
+// faria o React considerar o estado alterado, disparando um render por
+// engano em toda troca de sinal.
+const SEM_FAIXAS = [];
 export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, gameState, currentIndex, ruaQueFura, onPenalidade }) {
   const [agentesChamados, setAgentesChamados] = useState([]);
   const [guardasAtivos, setGuardasAtivos] = useState([]);
@@ -30,10 +35,16 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
   // scanner só é recriado quando lightState/gameState mudam, não a cada
   // passo do jogador, então uma variável comum aqui ficaria presa na
   // posição de quando o sinal ficou vermelho.
+  //
+  // Espelhado num efeito, e não durante o render, pelo mesmo motivo dos
+  // outros dois espelhos deste arquivo: quem lê é o radar de 300ms, para
+  // quem o atraso de um render não significa nada.
   const currentIndexRef = useRef(currentIndex);
-  currentIndexRef.current = currentIndex;
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
 
-  const [faixasComCarroParado, setFaixasComCarroParado] = useState([]);
+  const [faixasComCarroParado, setFaixasComCarroParado] = useState(SEM_FAIXAS);
 
   // Espelho síncrono de agentesChamados, usado por chamarGuarda para não
   // depender do estado, que só chega no render seguinte.
@@ -52,24 +63,30 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
     ruaQueFuraRef.current = ruaQueFura;
   }, [ruaQueFura]);
 
-  // Descarta as faixas já atendidas que ficaram para trás. Devolver o
-  // array original quando nada muda evita re-render a cada passo.
-  useEffect(() => {
-    const limite = currentIndex - FAIXAS_ATRAS_A_MANTER;
-    setAgentesChamados((prev) => {
-      const restantes = prev.filter((lane) => lane >= limite);
-      return restantes.length === prev.length ? prev : restantes;
-    });
-    jaAtendidasRef.current.forEach((lane) => {
-      if (lane < limite) jaAtendidasRef.current.delete(lane);
-    });
-  }, [currentIndex]);
+  // Descarta as faixas já atendidas que ficaram para trás.
+  //
+  // Isto já foi um efeito disparado a cada passo do jogador, o que era um
+  // setState no corpo de um efeito rodando o tempo todo. A limpeza só existe
+  // para as listas não crescerem sem limite numa partida longa, e elas só
+  // crescem quando um guarda é chamado — então limpar junto de quem faz
+  // crescer cobre exatamente os mesmos casos, sem render nenhum a mais.
+  const descartarFaixasParaTras = (lista) =>
+    lista.filter((lane) => lane >= currentIndex - FAIXAS_ATRAS_A_MANTER);
 
   // Radar: enquanto o sinal está vermelho (pedestre pode atravessar), varre
   // SÓ a faixa de pedestre do par atual/próximo do jogador — nunca uma
   // faixa mais à frente que ele ainda não alcançou, mesmo que ela já
   // esteja renderizada na tela (o alcance de renderização vai bem além do
   // que é relevante chamar guarda agora).
+  //
+  // O radar só roda com o sinal vermelho e o jogo em andamento. Quando ele
+  // desliga, a lista é esvaziada NA LIMPEZA do efeito, e não num `else` no
+  // corpo dele: o `else` era um setState síncrono durante o efeito, mas
+  // esvaziar continua sendo obrigatório. Sem isso, ao abrir o vermelho de
+  // novo a leitura do ciclo anterior valeria por até 300ms — tempo suficiente
+  // para o jogador ganhar bônus chamando guarda para um carro que já saiu, e
+  // para a faixa contar como bloqueada, servindo de desculpa falsa para
+  // atravessar fora dela.
   useEffect(() => {
     if (lightState === 'red' && gameState === 'playing') {
       const scanner = setInterval(() => {
@@ -78,7 +95,7 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
         const indiceDaFaixaAlvo = crosswalkIndexFor(currentIndexRef.current);
         const faixaEl = arenaRef.current.querySelector(`.crosswalk[data-crosswalk-index="${indiceDaFaixaAlvo}"]`);
         if (!faixaEl) {
-          setFaixasComCarroParado([]);
+          setFaixasComCarroParado(SEM_FAIXAS);
           return;
         }
 
@@ -114,9 +131,10 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
         setFaixasComCarroParado(novasFaixasComCarro);
       }, 300);
 
-      return () => clearInterval(scanner);
-    } else {
-      setFaixasComCarroParado([]);
+      return () => {
+        clearInterval(scanner);
+        setFaixasComCarroParado(SEM_FAIXAS);
+      };
     }
   }, [lightState, gameState, arenaRef, vehicleElsRef]);
 
@@ -137,8 +155,12 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
     jaAtendidasRef.current.add(pistaValidaProxima);
 
     onPenalidade((p) => p - BONUS_CHAMAR_GUARDA);
-    setAgentesChamados((prev) => [...prev, pistaValidaProxima]);
+    setAgentesChamados((prev) => [...descartarFaixasParaTras(prev), pistaValidaProxima]);
     setGuardasAtivos((prev) => [...prev, pistaValidaProxima]);
+
+    jaAtendidasRef.current.forEach((lane) => {
+      if (lane < currentIndex - FAIXAS_ATRAS_A_MANTER) jaAtendidasRef.current.delete(lane);
+    });
   };
 
   const liberarGuarda = (lane) => {
@@ -149,7 +171,7 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
     jaAtendidasRef.current.clear();
     setAgentesChamados([]);
     setGuardasAtivos([]);
-    setFaixasComCarroParado([]);
+    setFaixasComCarroParado(SEM_FAIXAS);
   };
 
   return { guardasAtivos, guardasAtivosRef, pistaValidaProxima, faixasComCarroParado, chamarGuarda, liberarGuarda, resetGuardas };

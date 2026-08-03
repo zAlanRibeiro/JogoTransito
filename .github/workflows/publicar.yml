@@ -75,6 +75,13 @@ jobs:
       # execução e transformariam um deploy de 1 minuto em vários.
       - run: npm test
 
+      # O lint entra aqui agora que o projeto está com zero problemas. Antes
+      # ele acusava 21, e um portão que já vive vermelho não impede nada — só
+      # ensina a ignorá-lo. Zerado, ele passa a valer: qualquer regressão nas
+      # regras de hooks do React trava a publicação em vez de virar mais um
+      # aviso no meio do barulho.
+      - run: npm run lint
+
       - run: npm run build
 
       - uses: actions/upload-pages-artifact@v3

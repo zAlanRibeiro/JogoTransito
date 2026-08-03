@@ -1,4 +1,3 @@
-import React from 'react';
 import { Star, Heart, Hourglass, CheckCircle2, AlertTriangle, AlertOctagon, ShieldAlert, ChevronLeft, ChevronRight, Trophy, RotateCcw, Pause, Play, Gamepad2, Home, Smartphone, Volume2, VolumeX } from 'lucide-react';
 
 /* Ícones do HUD — usando lucide-react (npm install lucide-react) em vez de
