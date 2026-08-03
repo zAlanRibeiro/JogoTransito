@@ -1,42 +1,104 @@
 import { test, expect, devices } from '@playwright/test';
 import { esperarSinalAberto, liberarCaminho, lerPosicaoY } from './helpers';
 
-// No celular, ANDAR é segurar a tela (ver onPointerDown na GameArena). Isso
-// colide de frente com o toque longo do navegador: como a cena inteira é
-// feita de <img>, segurar para andar abria o menu de baixar / compartilhar /
-// copiar imagem por cima do jogo. Bastava andar mais de meio segundo.
+// O controle de celular é um joystick virtual no canto inferior esquerdo.
+// Ele substituiu um esquema de zonas invisíveis em que segurar a tela andava
+// para a frente e os cantos de baixo andavam para os lados.
 //
-// A defesa tem duas metades, e as duas precisam existir: -webkit-touch-callout
-// no CSS (Safari do iOS) e preventDefault no contextmenu (Chrome do Android,
-// que ignora a propriedade). Este arquivo existe porque é fácil remover uma
-// delas sem perceber, e o estrago só aparece num aparelho de verdade.
+// Este arquivo cobre as três coisas que aquele esquema não dava conta e que
+// só aparecem num aparelho de verdade.
 test.use({ ...devices['Pixel 7 landscape'] });
 
-test('segurar a tela anda, e o toque longo não abre o menu do navegador', async ({ page }) => {
+/** Arrasta a alavanca a partir do centro do berço e segura. */
+async function empurrarJoystick(page, cdp, dx, dy, ms = 700) {
+  const berco = await page.locator('.joystick').boundingBox();
+  const x = berco.x + berco.width / 2;
+  const y = berco.y + berco.height / 2;
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx, y: y + dy }] });
+  await page.waitForTimeout(ms);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(150);
+}
+
+const lerX = (page) =>
+  page.evaluate(() => {
+    const a = document.querySelector('.game-arena').getBoundingClientRect();
+    const p = document.querySelector('.pedestrian').getBoundingClientRect();
+    return p.left + p.width / 2 - a.left;
+  });
+
+async function comecarPartida(page) {
   await page.goto('/');
   await page.getByText('INICIAR JOGO').tap();
   await page.locator('.scoreboard').waitFor();
   await esperarSinalAberto(page);
   await liberarCaminho(page);
+  return page.context().newCDPSession(page);
+}
 
-  // Toque real, pelo protocolo do navegador. `page.mouse` e o dispatchEvent
-  // sintético não acionam este controle na emulação de celular — o jogador
-  // não sai do lugar e o teste passaria uma impressão falsa.
-  const cdp = await page.context().newCDPSession(page);
-  const caixa = await page.locator('.game-arena').boundingBox();
-  const x = caixa.x + caixa.width / 2;
-  const y = caixa.y + caixa.height / 2;
+test('o joystick anda nas quatro direções, inclusive para trás', async ({ page }) => {
+  const cdp = await comecarPartida(page);
 
-  // A posição vem do tabuleiro, não do elemento: o boneco fica FIXO na tela e
-  // quem anda é a câmera, então o style dele não muda ao caminhar em frente.
-  const antes = await lerPosicaoY(page);
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  await page.waitForTimeout(900);
+  // Frente. A posição vem do TABULEIRO: o boneco fica fixo na tela e quem
+  // anda é a câmera, então o style dele não muda ao caminhar em frente.
+  const yInicial = await lerPosicaoY(page);
+  await empurrarJoystick(page, cdp, 0, -40);
+  const yDepoisDeAndar = await lerPosicaoY(page);
+  expect(yDepoisDeAndar).toBeGreaterThan(yInicial);
+
+  // Trás — a direção que o toque não tinha antes do joystick.
+  await empurrarJoystick(page, cdp, 0, 40);
+  expect(await lerPosicaoY(page)).toBeLessThan(yDepoisDeAndar);
+
+  // Lados.
+  const xInicial = await lerX(page);
+  await empurrarJoystick(page, cdp, -40, 0);
+  const xAposEsquerda = await lerX(page);
+  expect(xAposEsquerda).toBeLessThan(xInicial);
+
+  await empurrarJoystick(page, cdp, 40, 0);
+  expect(await lerX(page)).toBeGreaterThan(xAposEsquerda);
+});
+
+test('encostar no centro do joystick não move o boneco', async ({ page }) => {
+  const cdp = await comecarPartida(page);
+  const x0 = await lerX(page);
+  const y0 = await lerPosicaoY(page);
+
+  // Zona morta: sem ela, só encostar o polegar já empurraria o jogador, e ele
+  // nunca conseguiria ficar parado na calçada esperando o sinal.
+  await empurrarJoystick(page, cdp, 3, 3, 600);
+
+  expect(await lerX(page)).toBeCloseTo(x0, 0);
+  expect(await lerPosicaoY(page)).toBe(y0);
+});
+
+test('tocar a tela fora do joystick não anda mais', async ({ page }) => {
+  const cdp = await comecarPartida(page);
+  const y0 = await lerPosicaoY(page);
+  const arena = await page.locator('.game-arena').boundingBox();
+
+  // Segurar a tela era o controle antigo. Se ainda andasse, os dois esquemas
+  // estariam convivendo e o jogador andaria sem querer ao tocar em qualquer
+  // lugar da cena.
+  await cdp.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: arena.x + arena.width * 0.6, y: arena.y + arena.height * 0.5 }],
+  });
+  await page.waitForTimeout(800);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  expect(await lerPosicaoY(page)).not.toBe(antes);
 
-  // O contextmenu é o evento que o Android dispara no toque longo: se ele
-  // sair sem defaultPrevented, o menu aparece.
+  expect(await lerPosicaoY(page)).toBe(y0);
+});
+
+test('o toque longo não abre o menu do navegador', async ({ page }) => {
+  await comecarPartida(page);
+
+  // Continua valendo com o joystick: a cena é toda feita de <img>, e sem esta
+  // defesa o toque longo abre o menu de baixar / compartilhar imagem por cima
+  // do jogo. -webkit-touch-callout resolve no iOS; o Chrome do Android só
+  // para com o preventDefault no contextmenu.
   const prevenido = await page.evaluate(() => {
     const arena = document.querySelector('.game-arena');
     const evento = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
@@ -44,11 +106,5 @@ test('segurar a tela anda, e o toque longo não abre o menu do navegador', async
     return evento.defaultPrevented;
   });
   expect(prevenido).toBe(true);
-
-  // A metade do iOS. O Chromium não expõe -webkit-touch-callout em
-  // getComputedStyle, então a checagem possível aqui é a seleção de texto,
-  // que é o que faz subirem as alças azuis junto com o menu.
-  const arena = page.locator('.game-arena');
-  await expect(arena).toHaveCSS('user-select', 'none');
-  await expect(arena).toHaveCSS('touch-action', 'manipulation');
+  await expect(page.locator('.game-arena')).toHaveCSS('user-select', 'none');
 });

@@ -643,60 +643,52 @@ body {
   100% { transform: translateX(var(--drive-fim, 800px)); }
 }
 
-/* --- Zonas de toque laterais (só em aparelho de toque) ------------------
-   Antes eram dois círculos de 52px nos cantos. Medido nos aparelhos, o
-   círculo chegava ao dedo com 38px no iPhone SE e 41px no iPhone 12 — bem
-   abaixo dos 44-48px que Apple e Material recomendam — porque o tamanho era
-   fixo em coordenadas da arena e o zoom da arena encolhia junto.
+/* --- Joystick virtual (só em aparelho de toque) -------------------------
+   Substitui o esquema de zonas invisíveis que existia aqui antes. Aquele
+   tinha dois defeitos de fundo: a fronteira entre "andar para a frente" e
+   "andar para o lado" não aparecia na tela, e não havia como andar para
+   TRÁS — o teclado tem S e seta para baixo, o toque não tinha nada.
 
-   O botão agora é um QUADRANTE: um quarto da largura, e só a METADE DE BAIXO
-   da altura. É onde o polegar descansa quando se segura o aparelho deitado.
-
-   Essa divisão veio de uso real. Antes a faixa lateral ia de cima a baixo, e
-   como só o círculo de 45px era visível, os outros 165px da faixa eram
-   invisíveis: encostar ali "não andava para a frente" sem nenhum motivo
-   aparente. Com o corte na metade, tudo que está acima da linha do polegar
-   anda para a frente — inclusive nas beiradas — e andar de lado fica onde a
-   mão já está. */
-.zona-toque {
+   Fica no canto inferior esquerdo, onde o polegar da mão que segura o
+   aparelho já descansa. O tamanho é em coordenadas da arena, então a escala
+   da arena se aplica por cima, como em todo o resto da cena. */
+.joystick {
   position: absolute;
-  top: 50%;
-  bottom: 0;
-  width: 25%;
-  z-index: 50;
-  padding: 0;
-  border: none;
-  background: transparent;
-  display: flex;
-  align-items: flex-end;
-  cursor: pointer;
-  touch-action: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.zona-toque-esquerda { left: 0; justify-content: flex-start; }
-.zona-toque-direita { right: 0; justify-content: flex-end; }
-
-/* A dica: o mesmo círculo de antes, agora puramente decorativo — quem recebe
-   o toque é a faixa inteira em volta dele. */
-.zona-toque .dica {
+  bottom: 18px;
+  left: 18px;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  z-index: 60;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
-  margin: 0 20px 20px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.7);
-  background: rgba(30, 60, 114, 0.55);
-  pointer-events: none;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  background: rgba(30, 60, 114, 0.42);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  /* touch-action: none é obrigatório, não decorativo: sem isto o navegador
+     interpreta o arrasto como rolagem da página e para de mandar
+     pointermove, travando a alavanca no lugar. */
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }
 
-/* Enquanto o dedo está na faixa, o círculo acende: sem isso o jogador não
-   tem como saber que pegou a zona, já que ela é invisível. */
-.zona-toque:active .dica {
-  background: rgba(30, 60, 114, 0.85);
+/* Enquanto o dedo está no controle ele fica mais nítido — é o único retorno
+   de que o toque foi reconhecido. */
+.joystick--ativo {
+  background: rgba(30, 60, 114, 0.6);
   border-color: #fff;
+}
+
+.joystick__alavanca {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--nt-navy);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 
 /* Cone de sinalização da via interditada (src/assets/cone.png, 26x31).

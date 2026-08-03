@@ -4,6 +4,7 @@ import Vehicle from './components/Vehicle';
 import Pedestrian from './components/Pedestrian';
 import SidewalkDecoration from './components/SidewalkDecoration';
 import AgenteAnimado from './components/AgenteAnimado';
+import Joystick from './components/Joystick';
 import usePlayerMovement from './hooks/usePlayerMovement';
 import useGuardSystem, { BONUS_CHAMAR_GUARDA } from './hooks/useGuardSystem';
 import useArenaResponsiva from './hooks/useArenaResponsiva';
@@ -15,7 +16,7 @@ import MainMenu from './components/MainMenu';
 import ComandosModal from './components/ComandosModal';
 import ResumoInfracoes from './components/ResumoInfracoes';
 import { INFRACOES_ZERADAS, totalDeInfracoes } from './infracoes';
-import { StarIcon, HeartIcon, HourglassIcon, CheckIcon, WarningIcon, GraveWarningIcon, InfractionIcon, ArrowLeftIcon, ArrowRightIcon, TrophyIcon, RestartIcon, PauseIcon, PlayIcon, GamepadIcon, HomeIcon, SomIcon } from './components/HudIcons';
+import { StarIcon, HeartIcon, HourglassIcon, CheckIcon, WarningIcon, GraveWarningIcon, InfractionIcon, TrophyIcon, RestartIcon, PauseIcon, PlayIcon, GamepadIcon, HomeIcon, SomIcon } from './components/HudIcons';
 import { SEGMENT_HEIGHT, mod3, segmentType, CROSSWALK_WIDTH, estaNaCalcadaComMargem, crosswalkIndexFor } from './gameGrid';
 import { calcularDificuldade } from './difficulty';
 import { sortearRuaQueFura } from './furarSinal';
@@ -111,9 +112,11 @@ export default function GameArena() {
   const [pausado, setPausado] = useState(false);
   const [mostrarComandos, setMostrarComandos] = useState(false);
   const [mostrarResumoFinal, setMostrarResumoFinal] = useState(false);
-  const [isTouchWalking, setIsTouchWalking] = useState(false);
-  const [isTouchLeft, setIsTouchLeft] = useState(false);
-  const [isTouchRight, setIsTouchRight] = useState(false);
+  // Direção que vem do joystick. Fica numa ref porque o dedo arrastando
+  // gera dezenas de mudanças por segundo: em estado, cada uma delas
+  // re-renderizaria a arena inteira — os oito segmentos, todos os veículos e
+  // as decorações — só para mover o boneco 4px.
+  const toqueRef = useRef({ frente: false, tras: false, esquerda: false, direita: false });
   const ehDispositivoDeToque = typeof window !== 'undefined' && (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
   const [vidas, setVidas] = useState(3);
   // aviso: infração pontual, some sozinha depois de alguns segundos.
@@ -199,15 +202,13 @@ export default function GameArena() {
   }, [registrarInfracao, mostrarAviso]);
 
   const { position, isWalking, isRespawning, resetPosition, respawnNaCalcada } = usePlayerMovement(
-    isTouchWalking,
+    toqueRef,
     lightState,
     handleLoseLife,
     gameState !== 'playing' || pausado,
     playerElRef,
     vehicleElsRef,
     scale,
-    isTouchLeft,
-    isTouchRight,
     larguraDaArena
   );
   respawnRef.current = respawnNaCalcada;
@@ -574,15 +575,16 @@ export default function GameArena() {
     }
   }, [timeLeft, lightState, gameState, pausado, guardasAtivosRef, handleLoseLife, registrarInfracao, mostrarAviso, carroAindaVaiCruzarAFaixa]);
 
+  // Já não anda: segurar a tela deixou de ser controle quando o joystick
+  // entrou. O handler continua existindo só para destravar o áudio, que os
+  // navegadores exigem que aconteça dentro de um gesto do usuário.
   const handleTouchStart = (e) => {
     if (e && e.button !== undefined && e.button !== 0) return;
     // Os navegadores só liberam áudio dentro de um gesto do usuário, e uma
     // aba que volta do segundo plano devolve o contexto suspenso. Como todo
     // toque na arena passa por aqui, este é o lugar natural de destravar.
     destravarAudio();
-    setIsTouchWalking(true);
   };
-  const handleTouchStop = () => setIsTouchWalking(false);
 
   const visible = [];
   for (let i = currentIndex - RENDER_BEHIND; i <= currentIndex + RENDER_AHEAD; i++) {
@@ -608,12 +610,6 @@ export default function GameArena() {
         '--drive-fim': `${larguraDaArena + 200}px`,
       }}
       onPointerDown={handleTouchStart}
-      onPointerUp={handleTouchStop}
-      // Mesmo motivo das zonas laterais: sem tratar o cancel, um toque
-      // interrompido pelo sistema deixava o jogador andando para sempre —
-      // direto para debaixo do primeiro carro.
-      onPointerCancel={handleTouchStop}
-      onPointerLeave={handleTouchStop}
       // O Chrome do Android não respeita -webkit-touch-callout: o único jeito
       // de impedir o menu de "baixar / compartilhar imagem" no toque longo é
       // barrar o evento aqui. Como andar É segurar a tela, sem isto o menu
@@ -734,43 +730,14 @@ export default function GameArena() {
         </button>
       )}
 
-      {/* --- CONTROLE LATERAL NO TOQUE (esquerda/direita) ---
-          Faixas verticais inteiras, não os círculos de 52px de antes: o alvo
-          real chegava ao dedo com 38px nos aparelhos menores. O círculo
-          continua ali, agora só como dica visual (ver .zona-toque no CSS).
-
-          O stopPropagation é o que mantém as ações exclusivas: sem ele o
-          toque bubbla até a arena e o jogador andaria de lado E para a
-          frente ao mesmo tempo — indo parar embaixo do carro do qual estava
-          justamente tentando desviar.
-
-          onPointerCancel junto com onPointerUp: quando o sistema toma o
-          toque (uma notificação, uma chamada, o gesto de voltar do Android),
-          o pointerup NUNCA chega. Sem tratar o cancel, o jogador ficava
-          andando de lado sozinho até tocar a tela de novo. */}
+      {/* --- JOYSTICK (só em aparelho de toque) ---
+          Substituiu o esquema anterior de zonas invisíveis. Além de mostrar
+          na tela onde se toca, ele devolve a direção que faltava: andar para
+          TRÁS, que o teclado sempre teve (S e seta para baixo) e o toque não
+          tinha. Quem está no meio da rua e vê o sinal virar agora consegue
+          recuar para a calçada, que é o que o jogo ensina a fazer. */}
       {ehDispositivoDeToque && gameState === 'playing' && (
-        <>
-          <button
-            className="zona-toque zona-toque-esquerda"
-            aria-label="Andar para a esquerda"
-            onPointerDown={(e) => { e.stopPropagation(); setIsTouchLeft(true); }}
-            onPointerUp={(e) => { e.stopPropagation(); setIsTouchLeft(false); }}
-            onPointerCancel={(e) => { e.stopPropagation(); setIsTouchLeft(false); }}
-            onPointerLeave={(e) => { e.stopPropagation(); setIsTouchLeft(false); }}
-          >
-            <span className="dica"><ArrowLeftIcon size={28} /></span>
-          </button>
-          <button
-            className="zona-toque zona-toque-direita"
-            aria-label="Andar para a direita"
-            onPointerDown={(e) => { e.stopPropagation(); setIsTouchRight(true); }}
-            onPointerUp={(e) => { e.stopPropagation(); setIsTouchRight(false); }}
-            onPointerCancel={(e) => { e.stopPropagation(); setIsTouchRight(false); }}
-            onPointerLeave={(e) => { e.stopPropagation(); setIsTouchRight(false); }}
-          >
-            <span className="dica"><ArrowRightIcon size={28} /></span>
-          </button>
-        </>
+        <Joystick aoMudar={(direcao) => { toqueRef.current = direcao; }} />
       )}
 
       {aviso && (
