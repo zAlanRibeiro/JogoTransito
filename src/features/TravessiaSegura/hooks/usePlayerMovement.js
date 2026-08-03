@@ -57,8 +57,13 @@ const TECLAS_DE_MOVIMENTO = new Map([
 // Numa ref, o laço lê o valor mais recente sem que nada precise reexecutar.
 export default function usePlayerMovement(toqueRef, lightState, onLoseLife, isGameOver, playerElRef, vehicleElsRef, scale = 1, larguraDaArena = 600) {
   // O jogador nasce no meio da arena, seja qual for a largura dela.
+  //
+  // Os dois começam do mesmo lugar mas cada um cria o seu objeto: ler
+  // posRef.current aqui para semear o useState seria acessar uma ref durante
+  // o render, e o React não garante que o valor lido nesse momento seja o do
+  // render que vai ser aproveitado.
   const posRef = useRef({ x: larguraDaArena / 2, y: 0 });
-  const [position, setPosition] = useState(posRef.current);
+  const [position, setPosition] = useState(() => ({ x: larguraDaArena / 2, y: 0 }));
   const [isWalking, setIsWalking] = useState(false);
   const [isRespawning, setIsRespawning] = useState(false);
   const lastMistakeTime = useRef(0);

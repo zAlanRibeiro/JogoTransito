@@ -151,7 +151,13 @@ export default function GameArena() {
   const [penalidade, setPenalidade] = useState(0);
 
   const [gameState, setGameState] = useState('menu');
-  const [highScore, setHighScore] = useState(lerRecordeSalvo);
+  // O recorde guardado entre partidas. O recorde EXIBIDO é derivado dele com
+  // a pontuação da partida atual (`highScore`, mais abaixo): o painel de fim
+  // de jogo é o único lugar que mostra este número, então calcular na hora dá
+  // no mesmo que manter um estado espelhando — e dispensa um setState dentro
+  // de efeito. Quem fecha a partida (reiniciar / voltar ao menu) é que dobra
+  // a pontuação para dentro do recorde guardado.
+  const [recordeSalvo, setRecordeSalvo] = useState(lerRecordeSalvo);
   
   const [hasWonOnce, setHasWonOnce] = useState(false);
 
@@ -211,13 +217,10 @@ export default function GameArena() {
     scale,
     larguraDaArena
   );
-  respawnRef.current = respawnNaCalcada;
-
   const playerX = position.x;
   const playerY = position.y;
 
   const playerYRef = useRef(playerY);
-  playerYRef.current = playerY;
 
   const currentIndex = Math.floor(playerY / SEGMENT_HEIGHT);
 
@@ -232,28 +235,21 @@ export default function GameArena() {
   // em true até a próxima chegada numa calçada — não importa se ele volta
   // pra dentro da faixa depois, a travessia já deixou de ser "só pela faixa".
   const saiuDaFaixaRef = useRef(false);
-  if (
-    segmentType(Math.floor(playerY / SEGMENT_HEIGHT)) === 'rua' &&
+  const pisandoForaDaFaixa =
+    segmentType(currentIndex) === 'rua' &&
     // O centro é o da arena ATUAL, não o 300 fixo de quando ela media 600.
     // A faixa de pedestre é desenhada em left:50%, então numa arena mais
     // larga o 300 apontava para um pedaço qualquer do asfalto: o jogador
     // atravessava em cima da faixa e mesmo assim era marcado como fora dela,
     // levando infração e metade dos pontos.
     Math.abs(playerX - larguraDaArena / 2) > CROSSWALK_WIDTH / 2 &&
-    faixasComCarroParado.length === 0
-  ) {
-    saiuDaFaixaRef.current = true;
-  }
+    faixasComCarroParado.length === 0;
 
   const creditedRawScoreRef = useRef(creditedRawScore);
-  creditedRawScoreRef.current = creditedRawScore;
 
   const score = Math.max(0, creditedRawScore - penalidade);
-  // Atribuição direta durante o render (mesmo padrão do playerYRef acima):
-  // garante que o efeito do semáforo sempre leia o score do frame mais
-  // recente, sem o atraso de um useEffect assíncrono.
+  const highScore = Math.max(recordeSalvo, score);
   const scoreRef = useRef(score);
-  scoreRef.current = score;
 
   const totalInfracoes = totalDeInfracoes(infracoes);
 
@@ -271,13 +267,36 @@ export default function GameArena() {
   // mais cedo e os carros passam mais rápido (com teto, nunca impossível).
   const dificuldade = calcularDificuldade(score);
   const dificuldadeRef = useRef(dificuldade);
-  dificuldadeRef.current = dificuldade;
 
   // Atalhos de teclado: E chama o guarda, Esc abre/fecha a pausa. Tudo por
   // ref porque estas funções mudam de identidade a cada render e não
   // queremos reanexar o listener toda hora.
   const atalhosRef = useRef(null);
-  atalhosRef.current = { chamarGuarda, pausado, mostrarComandos, gameState };
+
+  // Espelha, num único efeito, todos os valores que o jogo precisa ler de
+  // dentro de temporizadores, handlers de teclado e callbacks do laço de
+  // animação — lugares que rodam DEPOIS do render e que, sem estes espelhos,
+  // enxergariam o valor de quando foram criados.
+  //
+  // Antes cada um destes era escrito direto no corpo do componente. Escrever
+  // numa ref durante o render é proibido porque o React pode descartar um
+  // render pela metade: a ref guardaria um valor de um render que nunca
+  // chegou à tela. Aqui a escrita acontece depois que o render virou tela,
+  // o que é sempre antes de qualquer temporizador ou toque do jogador.
+  //
+  // `saiuDaFaixaRef` é o único que não é espelho e sim acumulador: ele gruda
+  // em true e só é zerado ao chegar numa calçada (ou ao reiniciar), porque a
+  // travessia inteira deixa de valer como "pela faixa" no instante em que o
+  // jogador pisa fora dela.
+  useEffect(() => {
+    respawnRef.current = respawnNaCalcada;
+    playerYRef.current = playerY;
+    creditedRawScoreRef.current = creditedRawScore;
+    scoreRef.current = score;
+    dificuldadeRef.current = dificuldade;
+    atalhosRef.current = { chamarGuarda, pausado, mostrarComandos, gameState };
+    if (pisandoForaDaFaixa) saiuDaFaixaRef.current = true;
+  });
   useEffect(() => {
     const handleKeyDown = (e) => {
       const atual = atalhosRef.current;
@@ -433,30 +452,41 @@ export default function GameArena() {
     prevVidasRef.current = vidas;
   }, [vidas]);
 
+  // Vitória: ao cruzar 200 pontos entra a cutscene, e 2,5s depois a tela de
+  // vitória.
+  //
+  // Exceção assumida à regra set-state-in-effect. A regra existe porque
+  // mudar estado no corpo de um efeito obriga a uma segunda passada de
+  // render, e isso pesa quando acontece a todo instante — foi o caso dos
+  // outros efeitos deste arquivo, que foram reescritos. Aqui acontece UMA
+  // vez por partida, no instante da vitória, e a alternativa seria derivar
+  // 'cutscene' e 'won' em vez de guardá-los em gameState: uma reescrita da
+  // máquina de estados do fim de jogo (que também comanda som, placar e
+  // resumo de infrações) para economizar um render que ninguém percebe.
   useEffect(() => {
     if (score >= 200 && gameState === 'playing' && !hasWonOnce) {
-      setGameState('cutscene'); 
-      setLightState('red'); 
-      
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setGameState('cutscene');
+      setLightState('red');
+
       setTimeout(() => {
-        setGameState('won'); 
-      }, 2500); 
+        setGameState('won');
+      }, 2500);
     }
   }, [score, gameState, hasWonOnce]);
 
+  // Só GRAVA o recorde; não mexe em estado. O valor mostrado é derivado logo
+  // acima, então não havia nada para o efeito guardar — ele mantinha em
+  // estado um número que já dava para calcular, ao custo de um render extra
+  // no fim de cada partida.
   useEffect(() => {
-    if (gameState === 'gameover' || gameState === 'won') {
-      setHighScore((prev) => {
-        const novoRecorde = Math.max(prev, score);
-        if (novoRecorde > prev) {
-          salvarRecorde(novoRecorde);
-        }
-        return novoRecorde;
-      });
-    }
-  }, [gameState, score]);
+    if (gameState !== 'gameover' && gameState !== 'won') return;
+    if (score > recordeSalvo) salvarRecorde(score);
+  }, [gameState, score, recordeSalvo]);
 
   const restartGame = () => {
+    // Antes de zerar o placar, guarda o que a partida que acabou alcançou.
+    setRecordeSalvo(highScore);
     setVidas(3);
     setPenalidade(0);
     setCreditedRawScore(0);
@@ -485,6 +515,7 @@ export default function GameArena() {
   };
 
   const goToMenu = () => {
+    setRecordeSalvo(highScore);
     setVidas(3);
     setPenalidade(0);
     setCreditedRawScore(0);
@@ -520,13 +551,24 @@ export default function GameArena() {
     return carro.getBoundingClientRect().right < faixaEl.getBoundingClientRect().left;
   }, []);
 
+  // Relógio do semáforo: um disparo por segundo. Enquanto sobra tempo ele só
+  // decrementa; no último segundo, em vez de zerar o contador e deixar que o
+  // efeito rode de novo para avançar a fase, ele avança ali mesmo.
+  //
+  // A versão anterior fazia a troca de fase no corpo do efeito, ao ver
+  // timeLeft === 0. Isso obrigava a uma volta completa de render só para
+  // chegar num estado que ninguém precisava ver — o contador chegava a
+  // aparecer zerado por um quadro antes de a fase virar. A contagem total
+  // não muda: verde de 5 continua durando cinco disparos de um segundo.
   useEffect(() => {
     if (gameState !== 'playing' || pausado) return;
 
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
-      return () => clearTimeout(timer);
-    } else {
+    const relogio = setTimeout(() => {
+      if (timeLeft > 1) {
+        setTimeLeft((anterior) => anterior - 1);
+        return;
+      }
+
       if (lightState === 'green') {
         setLightState('yellow');
         setTimeLeft(2);
@@ -572,7 +614,9 @@ export default function GameArena() {
           }
         }
       }
-    }
+    }, 1000);
+
+    return () => clearTimeout(relogio);
   }, [timeLeft, lightState, gameState, pausado, guardasAtivosRef, handleLoseLife, registrarInfracao, mostrarAviso, carroAindaVaiCruzarAFaixa]);
 
   // Já não anda: segurar a tela deixou de ser controle quando o joystick

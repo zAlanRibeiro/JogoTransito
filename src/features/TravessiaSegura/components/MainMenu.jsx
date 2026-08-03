@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 // IMPORTANTE: Ajuste este caminho ../../../assets/agente.png se a sua imagem estiver em outro lugar!
 import agenteImg from '../../../assets/agente.png';
 import ComandosModal from './ComandosModal';

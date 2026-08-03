@@ -1,4 +1,3 @@
-import React from 'react';
 import sinalVerde from '../../../assets/sinalVerde.png';
 import sinalAmarelo from '../../../assets/sinalAmarelo.png';
 import sinalVermelho from '../../../assets/sinalVermelho.png';
