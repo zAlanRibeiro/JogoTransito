@@ -326,15 +326,30 @@ body {
 /* --- BONECO/AGENTE: Área Azul (Vertical Direita) --- */
 .nit-agent-wrapper {
   grid-column: 3 / 4;
-  grid-row: 1 / 3; 
+  grid-row: 1 / 3;
   display: flex;
   justify-content: center;
-  align-items: center;
+  /* De pé no chão do cartão, e não centralizado na vertical: assim o que
+     sobra de imagem sai por baixo (onde não há nada) em vez de por cima,
+     onde ficam o botão Comandos e o topo do cartão. */
+  align-items: flex-end;
+  /* Sem isto o item do grid não encolhe abaixo do conteúdo e o max-height
+     da imagem não tem contra o que ser calculado. */
+  min-height: 0;
+  /* Faixa reservada para o botão Comandos, que flutua no canto: o agente
+     nunca sobe até a altura dele. */
+  padding-top: 34px;
 }
 
 .nit-agent-img {
   width: 170%;
   max-width: 400px;
+  /* O limite de ALTURA é o que faltava. A imagem era dimensionada só pela
+     largura, então em celular deitado — onde o cartão tem ~270px de altura e
+     ela pedia 366 — o agente vazava 32px por cima e entrava embaixo do botão
+     Comandos. Com height:auto, o navegador reduz a largura junto e mantém a
+     proporção. */
+  max-height: 100%;
   height: auto;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
 }
