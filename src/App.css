@@ -24,7 +24,9 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  width: 600px;
+  /* Acompanha a arena, que já não tem largura fixa: com 600px cravados aqui,
+     o menu deixava faltando um pedaço de fundo à direita nas telas largas. */
+  width: 100%;
   height: 400px;
   background: linear-gradient(135deg, var(--nt-navy), #142a52 60%, #0c1c3d);
   display: flex;
@@ -458,7 +460,9 @@ body {
    o pixelated volta a valer (1%, só a borda). */
 .game-arena {
   position: relative;
-  width: 600px;
+  /* A largura vem por style inline (useArenaResponsiva): ela acompanha a
+     proporção da tela. Só a altura continua fixa — o sistema de coordenadas
+     do jogo é construído sobre ela. */
   height: 400px;
   flex-shrink: 0;
   overflow: hidden;
@@ -557,12 +561,15 @@ body {
 .crosswalk .stripe { display: none; }
 
 /* --- 3. O SEMÁFORO ---
-   O `right` daqui é o que posiciona o poste de verdade: a GameArena renderiza
-   um container externo encostado na borda, e este fica dentro dele. Encostado
-   na faixa de pedestre, que vai de 245 a 355 nas coordenadas da arena. */
+   O poste é ancorado na FAIXA DE PEDESTRE, não na borda da arena. Com
+   `right: 165px` ele ficava a uma distância fixa da direita, o que só
+   coincidia com a faixa enquanto a arena media 600 de largura; depois que ela
+   passou a acompanhar a tela, o poste ia embora para longe da travessia.
+   A faixa tem 110px centrados, ou seja, vai de 50%-55px a 50%+55px. Os 18px
+   de folga são a distância original entre a borda direita dela e o poste. */
 .traffic-light-container {
   position: absolute;
-  right: 165px;
+  left: calc(50% + 55px + 18px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -612,9 +619,67 @@ body {
   image-rendering: crisp-edges;
 }
 
+/* O fim da travessia acompanha a largura da arena, via --drive-fim, que o
+   GameArena define como largura + 200. O 800px fixo de antes valia só para a
+   arena de 600: numa mais larga o carro sumia no meio da pista. O fallback
+   mantém a animação sã se a variável faltar. */
 @keyframes drive {
   0% { transform: translateX(-150px); }
-  100% { transform: translateX(800px); }
+  100% { transform: translateX(var(--drive-fim, 800px)); }
+}
+
+/* --- Zonas de toque laterais (só em aparelho de toque) ------------------
+   Antes eram dois círculos de 52px nos cantos. Medido nos aparelhos, o
+   círculo chegava ao dedo com 38px no iPhone SE e 41px no iPhone 12 — bem
+   abaixo dos 44-48px que Apple e Material recomendam — porque o tamanho era
+   fixo em coordenadas da arena e o zoom da arena encolhia junto.
+
+   Agora o BOTÃO é uma faixa vertical inteira, e o círculo é só a dica visual
+   dentro dele. O alvo real passa de ~40px para um quarto da largura da tela,
+   de cima a baixo. Continua sendo um <button> de verdade, com aria-label,
+   em vez de uma <div> com handler.
+
+   25% de cada lado, e não um terço: andar para a FRENTE é a ação principal e
+   fica com a metade central, que é onde o polegar naturalmente cai. */
+.zona-toque {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 25%;
+  z-index: 50;
+  padding: 0;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: flex-end;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.zona-toque-esquerda { left: 0; justify-content: flex-start; }
+.zona-toque-direita { right: 0; justify-content: flex-end; }
+
+/* A dica: o mesmo círculo de antes, agora puramente decorativo — quem recebe
+   o toque é a faixa inteira em volta dele. */
+.zona-toque .dica {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 20px 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: rgba(30, 60, 114, 0.55);
+  pointer-events: none;
+}
+
+/* Enquanto o dedo está na faixa, o círculo acende: sem isso o jogador não
+   tem como saber que pegou a zona, já que ela é invisível. */
+.zona-toque:active .dica {
+  background: rgba(30, 60, 114, 0.85);
+  border-color: #fff;
 }
 
 /* Cone de sinalização da via interditada (src/assets/cone.png, 26x31).

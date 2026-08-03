@@ -163,12 +163,16 @@ function sortearDesvioY(peca, aleatorio) {
 
 // Posições seguras: longe do corredor central por onde o jogador anda e da
 // faixa de pedestres. O conjunto é ancorado pela esquerda nessa coordenada.
-const POSICOES = [42, 104, 452, 514];
+// Duas vagas encostadas em cada borda. As da direita são medidas A PARTIR da
+// borda direita, e não cravadas em 452/514 como antes: a arena passou a ter
+// largura variável, e valores fixos deixavam a calçada direita inteira vazia
+// numa tela larga. Em 600 de largura a conta devolve exatamente 452 e 514, o
+// que preserva o desenho original.
+const posicoesDaCalcada = (largura) => [42, 104, largura - 148, largura - 86];
 
 // Coordenadas internas da arena (as mesmas 600x400 do GameArena). O abrigo do
 // ponto de ônibus é largo o bastante para vazar pela borda direita ou para
 // invadir a vaga vizinha — 42 e 104 estão a só 62px de distância.
-const LARGURA_ARENA = 600;
 const MARGEM_BORDA = 8;
 const FOLGA_ENTRE_CONJUNTOS = 6;
 
@@ -227,9 +231,9 @@ function montarConjunto(conjunto, aleatorio) {
   });
 }
 
-function sortearDecoracoes(aleatorio, conjuntosDaAnterior) {
+function sortearDecoracoes(aleatorio, conjuntosDaAnterior, larguraDaArena) {
   const quantidade = 1 + Math.floor(aleatorio() * 3); // 1 a 3 por calçada
-  const vagas = embaralhar(POSICOES, aleatorio)
+  const vagas = embaralhar(posicoesDaCalcada(larguraDaArena), aleatorio)
     .slice(0, quantidade)
     .sort((a, b) => a - b); // da esquerda para a direita, para saber quem é vizinho
 
@@ -246,7 +250,7 @@ function sortearDecoracoes(aleatorio, conjuntosDaAnterior) {
         // quadra entregam o sorteio, e vale também entre conjuntos diferentes
         // — [BANCO] e [BANCO, GATO] não podem sair na mesma calçada.
         conjunto.every((peca) => !pecasUsadas.has(peca)) &&
-        posX + larguraDoConjunto(conjunto) <= LARGURA_ARENA - MARGEM_BORDA
+        posX + larguraDoConjunto(conjunto) <= larguraDaArena - MARGEM_BORDA
     );
     if (opcoes.length === 0) continue;
 
@@ -279,17 +283,23 @@ const PRIMEIRA_CALCADA = -PASSO_ENTRE_CALCADAS;
 const LIMITE_DO_CACHE = 240;
 const cache = new Map();
 
-function decoracoesDaCalcada(indice) {
-  const guardado = cache.get(indice);
+function decoracoesDaCalcada(indice, larguraDaArena) {
+  // A largura entra na chave: girar o aparelho muda a largura da arena e,
+  // com ela, onde as vagas da direita caem. Sem isso a calçada continuaria
+  // com o desenho da orientação anterior, com peças fora da borda nova.
+  const chave = `${indice}@${larguraDaArena}`;
+  const guardado = cache.get(chave);
   if (guardado) return guardado;
 
-  const anterior = indice > PRIMEIRA_CALCADA ? decoracoesDaCalcada(indice - PASSO_ENTRE_CALCADAS) : [];
+  const anterior =
+    indice > PRIMEIRA_CALCADA ? decoracoesDaCalcada(indice - PASSO_ENTRE_CALCADAS, larguraDaArena) : [];
   const sorteio = sortearDecoracoes(
     geradorAleatorio(SEMENTE_DA_SESSAO + indice),
-    anterior.map((decoracao) => decoracao.conjunto)
+    anterior.map((decoracao) => decoracao.conjunto),
+    larguraDaArena
   );
 
-  cache.set(indice, sorteio);
+  cache.set(chave, sorteio);
   if (cache.size > LIMITE_DO_CACHE) cache.delete(cache.keys().next().value);
   return sorteio;
 }
@@ -329,12 +339,12 @@ function Sprite({ item, espelhado }) {
   );
 }
 
-export default function SidewalkDecoration({ indice }) {
+export default function SidewalkDecoration({ indice, larguraDaArena = 600 }) {
   // O componente re-renderiza a cada passo do jogador (a cena inteira se
   // move), então o sorteio precisa ficar fora do corpo — senão a decoração
   // trocaria de item e de lugar a cada quadro. O resultado vem do índice da
   // calçada, não do mount, então é sempre o mesmo para o mesmo trecho da rua.
-  const decoracoes = useMemo(() => decoracoesDaCalcada(indice), [indice]);
+  const decoracoes = useMemo(() => decoracoesDaCalcada(indice, larguraDaArena), [indice, larguraDaArena]);
 
   return (
     <>
