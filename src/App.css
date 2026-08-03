@@ -465,6 +465,33 @@ body {
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   background-color: #FFFF;
+
+  /* No celular, SEGURAR a tela é o controle de andar (ver onPointerDown na
+     GameArena). Isso é exatamente o gesto que o navegador lê como "toque
+     longo", e como a cena inteira é feita de <img>, ele abria o menu de
+     baixar / compartilhar / copiar imagem em cima do jogo — bastava o
+     jogador andar mais de meio segundo, que é o normal.
+
+     -webkit-touch-callout resolve no Safari do iOS; o Chrome do Android
+     ignora essa propriedade e é barrado pelo preventDefault no evento
+     contextmenu, lá na GameArena. Os dois são necessários.
+
+     user-select entra pelo mesmo motivo: sem ele o toque longo ainda
+     seleciona o texto do HUD e sobem as alças azuis de seleção. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Sem realce azul ao tocar, e sem o zoom do toque duplo — num jogo em que
+     se toca a tela o tempo todo, os dois só atrapalham. */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Arrastar sprite pra fora do jogo é o mesmo incômodo pelo mouse: sem isto,
+   um clique-e-arrasta no boneco descola a imagem e deixa o fantasma dela
+   colado no cursor. */
+.game-arena img {
+  -webkit-user-drag: none;
 }
 
 .hud {
