@@ -1,4 +1,22 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import agente1 from '../../../assets/agente_1.png';
+import agente2 from '../../../assets/agente_2.png';
+import agente3 from '../../../assets/agente_3.png';
+import agente6 from '../../../assets/agente_6.png';
+import agente7 from '../../../assets/agente_7.png';
+
+// Os quadros são IMPORTADOS, não montados como `/agente_${frame}.png`.
+//
+// O caminho em string era absoluto, e absoluto quer dizer "a partir da raiz
+// do domínio". Publicado em zalanribeiro.github.io/JogoTransito/, ele pedia
+// zalanribeiro.github.io/agente_1.png — 404, e o guarda virava o "?" de
+// imagem quebrada. Só aparecia no ar: em localhost o jogo mora na raiz e o
+// caminho batia por acidente.
+//
+// O Vite não reescreve caminho montado dentro de string; ele só resolve o
+// que passa por import. Importando, cada quadro ganha URL com hash e
+// acompanha a base do build, seja qual for a pasta onde o jogo esteja.
+const QUADROS = { 1: agente1, 2: agente2, 3: agente3, 6: agente6, 7: agente7 };
 
 // Largura aproximada do sprite parado (altura 95px) e folga até o carro,
 // em px "locais" (coordenadas de antes da escala da arena). A folga
@@ -10,8 +28,10 @@ const LARGURA_ESTIMADA_DO_GUARDA = 55;
 const FOLGA_ATE_O_CARRO = 38;
 const POSICAO_PADRAO = 100; // usada se não der pra medir o carro (ex: ele saiu da tela)
 
-// Coordenadas internas da arena, e a folga mínima até as bordas dela.
-const LARGURA_ARENA = 600;
+// Folga mínima até as bordas da arena. A LARGURA dela vem por prop: desde
+// que ela passou a acompanhar a proporção da tela, um 600 fixo aqui fazia o
+// guarda calcular espaço e escala errados numa arena mais larga — ele parava
+// longe demais do carro e entrava pelo lado errado.
 const MARGEM_DA_ARENA = 10;
 const PASSO = 15;
 
@@ -22,7 +42,7 @@ const PASSO = 15;
 const SEQUENCIA_CAMINHADA = [1, 2, 3, 2];
 
 // Guarda que aparece, multa o carro parado sobre a faixa e vai embora.
-export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, arenaRef }) {
+export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, arenaRef, larguraDaArena = 600 }) {
   const [fase, setFase] = useState('entrando');
   const [frame, setFrame] = useState(1);
   const [posicaoX, setPosicaoX] = useState(-50);
@@ -64,13 +84,13 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
 
     const carRect = carEl.getBoundingClientRect();
     const arenaRect = arenaEl.getBoundingClientRect();
-    const escala = arenaRect.width / LARGURA_ARENA;
+    const escala = arenaRect.width / larguraDaArena;
     const esquerdaDoCarro = (carRect.left - arenaRect.left) / escala;
     const direitaDoCarro = (carRect.right - arenaRect.left) / escala;
 
     const espacoAEsquerda = esquerdaDoCarro - FOLGA_ATE_O_CARRO - MARGEM_DA_ARENA;
     const espacoADireita =
-      LARGURA_ARENA - MARGEM_DA_ARENA - (direitaDoCarro + FOLGA_ATE_O_CARRO);
+      larguraDaArena - MARGEM_DA_ARENA - (direitaDoCarro + FOLGA_ATE_O_CARRO);
 
     const cabeAEsquerda = espacoAEsquerda >= LARGURA_ESTIMADA_DO_GUARDA;
     const cabeADireita = espacoADireita >= LARGURA_ESTIMADA_DO_GUARDA;
@@ -90,13 +110,13 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
       direcaoRef.current = -1;
       setDirecao(-1);
       alvoXRef.current = Math.min(
-        LARGURA_ARENA - MARGEM_DA_ARENA - LARGURA_ESTIMADA_DO_GUARDA,
+        larguraDaArena - MARGEM_DA_ARENA - LARGURA_ESTIMADA_DO_GUARDA,
         direitaDoCarro + FOLGA_ATE_O_CARRO
       );
-      setPosicaoX(LARGURA_ARENA + LARGURA_ESTIMADA_DO_GUARDA);
+      setPosicaoX(larguraDaArena + LARGURA_ESTIMADA_DO_GUARDA);
     }
     setLadoDecidido(true);
-  }, [laneIndex, vehicleElsRef, arenaRef]);
+  }, [laneIndex, vehicleElsRef, arenaRef, larguraDaArena]);
 
   useEffect(() => {
     let interval;
@@ -137,7 +157,7 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
         setPosicaoX((x) => {
           // Vai embora pelo mesmo lado por onde chegou.
           const saiu =
-            direcaoRef.current === 1 ? x <= -60 : x >= LARGURA_ARENA + 60;
+            direcaoRef.current === 1 ? x <= -60 : x >= larguraDaArena + 60;
           if (saiu) {
             if (onCompleteRef.current) {
               onCompleteRef.current();
@@ -161,7 +181,7 @@ export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, ar
 
   return (
     <img
-      src={`/agente_${frame}.png`}
+      src={QUADROS[frame]}
       alt=""
       style={{
         position: 'absolute',
