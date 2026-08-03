@@ -713,12 +713,11 @@ export default function GameArena() {
           }}
           style={{
             position: 'absolute',
-            // Encostado no topo, logo abaixo da faixa do HUD, e NÃO no meio da
-            // tela como antes (bottom: 150px). Ali ele cobria a faixa de
-            // pedestre e uma pista inteira — justo o pedaço que o jogador
-            // precisa enxergar pra decidir se atravessa. E no celular ficava
-            // ainda por cima na altura do polegar.
-            top: '48px',
+            // No celular o botão fica no meio da tela, a pedido: ali ele cai
+            // debaixo do polegar e é alcançado sem soltar o aparelho. No
+            // computador continua encostado no topo, onde não cobre a faixa
+            // de pedestre nem a pista — que era o motivo de ter saído do meio.
+            ...(ehDispositivoDeToque ? { bottom: '150px' } : { top: '48px' }),
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 100,
