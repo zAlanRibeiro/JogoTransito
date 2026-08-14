@@ -1,5 +1,5 @@
 import { test, expect, devices } from '@playwright/test';
-import { esperarSinalAberto, liberarCaminho, lerPosicaoY } from './helpers';
+import { esperarSinalAberto, liberarCaminho, lerPosicaoY, contarVidas, pararVeiculoSobreAFaixa } from './helpers';
 
 // O controle de celular é um joystick virtual no canto inferior esquerdo.
 // Ele substituiu um esquema de zonas invisíveis em que segurar a tela andava
@@ -90,6 +90,41 @@ test('tocar a tela fora do joystick não anda mais', async ({ page }) => {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 
   expect(await lerPosicaoY(page)).toBe(y0);
+});
+
+test('perder uma vida com o dedo no joystick não faz o boneco sair andando sozinho', async ({ page }) => {
+  // O joystick só avisa quando a direção MUDA, e o dedo não sai do lugar
+  // quando o jogador é atropelado. Sem exigir que o comando seja refeito, o
+  // boneco voltava para a calçada e, no instante em que a piscada de
+  // invulnerabilidade acabava, saía andando sozinho para dentro da mesma rua
+  // — em geral para bater no mesmo carro e perder a vida seguinte.
+  const cdp = await comecarPartida(page);
+  await pararVeiculoSobreAFaixa(page, 1);
+
+  const berco = await page.locator('.joystick').boundingBox();
+  const x = berco.x + berco.width / 2;
+  const y = berco.y + berco.height / 2;
+  const vidasAntes = await contarVidas(page);
+
+  // Empurra para a frente e NÃO solta: bate no carro parado sobre a faixa.
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - 40 }] });
+
+  await expect.poll(() => contarVidas(page), { timeout: 10_000 }).toBe(vidasAntes - 1);
+
+  // Passa a janela de invulnerabilidade com o dedo ainda no lugar. Só olhar
+  // a posição não bastaria: sem a correção o boneco anda, bate no mesmo
+  // carro e VOLTA para a calçada, então ele estaria em y=0 do mesmo jeito.
+  // Quem denuncia a cascata é a vida seguinte indo embora sozinha.
+  await page.waitForTimeout(2200);
+  expect(await contarVidas(page)).toBe(vidasAntes - 1);
+  expect(await lerPosicaoY(page)).toBe(0);
+
+  // Refazendo o gesto, o controle volta a responder.
+  await liberarCaminho(page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await empurrarJoystick(page, cdp, 0, -40, 400);
+  expect(await lerPosicaoY(page)).toBeGreaterThan(0);
 });
 
 test('o toque longo não abre o menu do navegador', async ({ page }) => {
