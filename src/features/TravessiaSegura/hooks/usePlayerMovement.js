@@ -4,6 +4,23 @@ import { SEGMENT_HEIGHT, CYCLE_LENGTH, segmentType, estaNaCalcadaComMargem } fro
 // Escala em que as margens de colisão abaixo foram calibradas visualmente.
 const REFERENCE_SCALE = 1.4;
 
+// Onde os PÉS DESENHADOS do boneco pisam, contados a partir da BASE da caixa
+// dele, em pixels da arena.
+//
+// A caixa (.pedestrian, 42px) cobre só a parte de cima do boneco: o sprite é
+// bem mais alto e transborda para baixo. Medindo os quatro quadros da
+// caminhada, o pixel mais baixo de cada um cai entre 26 e 36px abaixo da base
+// da caixa — a variação vem da arte, em que cada quadro tem uma largura
+// diferente e portanto encolhe diferente ao ser desenhado com 28px.
+//
+// Carro e ônibus são grandes e ocupam o meio da faixa: para eles a caixa
+// serve, e a calibragem visual das margens já leva em conta essa diferença.
+// Quem corre RENTE AO CHÃO na beirada da pista — a bicicleta da ciclovia —
+// precisa ser comparado com esta faixa de pés: contra a caixa, ela passaria
+// por baixo do boneco sem nunca encostar nele.
+const PES_ACIMA_DA_BASE = 26;
+const PES_ABAIXO_DA_BASE = 36;
+
 // Ao perder uma vida o jogador volta pra calçada e fica um tempo imóvel e
 // intocável, piscando. Sem essa janela ele era atingido de novo no frame
 // seguinte (ainda encostado no carro) e perdia várias vidas de uma vez.
@@ -213,7 +230,7 @@ export default function usePlayerMovement(toqueRef, lightState, onLoseLife, isGa
       const carEls = vehicleElsRef?.current ? vehicleElsRef.current.values() : [];
       let sofreuAcidente = false;
 
-      if (playerEl && !naCalcada) {
+      if (playerEl) {
         const pRect = playerEl.getBoundingClientRect();
         // getBoundingClientRect já vem em pixels de tela (pós-transform:scale
         // da arena). As margens abaixo foram calibradas visualmente em
@@ -224,16 +241,37 @@ export default function usePlayerMovement(toqueRef, lightState, onLoseLife, isGa
         const marginTop = 54 * fatorMargem; // Foco apenas nos pés do personagem
         const marginBottom = 0;
 
+        // A linha do chão do boneco, para quem é conferido pelos pés.
+        const pesTopo = pRect.bottom + PES_ACIMA_DA_BASE * scale;
+        const pesBase = pRect.bottom + PES_ABAIXO_DA_BASE * scale;
+
         for (const car of carEls) {
           const cRect = car.getBoundingClientRect();
-          const cMarginY = 25 * fatorMargem;
-          const cMarginX = 14 * fatorMargem;
+          // Quanto da caixa do sprite é moldura vazia em volta do veículo.
+          // O padrão é o do carro; quem tem sprite de outra proporção — a
+          // bicicleta, cujo quadro reserva espaço para o cabelo balançar —
+          // declara a sua no próprio elemento, senão seria atropelado por um
+          // veículo a meia tela de distância (ou não seria nunca).
+          const cMarginY = (Number(car.dataset.margemY) || 25) * fatorMargem;
+          const cMarginX = (Number(car.dataset.margemX) || 14) * fatorMargem;
+          const pelosPes = car.dataset.atropelaPelosPes === '1';
+
+          // Na calçada não há atropelamento de CARRO, mesmo que o sprite do
+          // boneco se sobreponha visualmente a um carro perto da borda: quem
+          // decide é o segmento onde o jogador está, não a caixa da imagem.
+          // A bicicleta é a exceção, e é o motivo de ela existir no jogo: ela
+          // corre pela ciclovia, colada no meio-fio, numa faixa que o jogo
+          // ainda conta como calçada. Quem pisa ali é atropelado de verdade.
+          if (naCalcada && !pelosPes) continue;
+
+          const bordaDeCima = pelosPes ? pesTopo : pRect.top + marginTop;
+          const bordaDeBaixo = pelosPes ? pesBase : pRect.bottom - marginBottom;
 
           if (
             pRect.left + marginX < cRect.right - cMarginX &&
             pRect.right - marginX > cRect.left + cMarginX &&
-            pRect.top + marginTop < cRect.bottom - cMarginY &&
-            pRect.bottom - marginBottom > cRect.top + cMarginY
+            bordaDeCima < cRect.bottom - cMarginY &&
+            bordaDeBaixo > cRect.top + cMarginY
           ) {
             sofreuAcidente = true;
             break;

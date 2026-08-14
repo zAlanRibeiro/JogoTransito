@@ -109,6 +109,12 @@ export default function useGuardSystem({ arenaRef, vehicleElsRef, lightState, ga
         const novasFaixasComCarro = [];
 
         vehicleElsRef.current.forEach((el, laneIndex) => {
+          // O mapa também guarda as bicicletas, com chave de texto
+          // ('ciclista-3') em vez do índice da faixa. Elas nunca param no
+          // sinal, então nunca são "carro parado na faixa" — e não há guarda
+          // para chamar por causa de uma.
+          if (typeof laneIndex !== 'number') return;
+
           // O carro que está furando o sinal cruza a faixa em MOVIMENTO: não é
           // um carro parado irregularmente. Sem esta exceção ele apareceria no
           // radar, o jogador ganharia o bônus por chamar o guarda para quem

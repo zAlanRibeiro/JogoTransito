@@ -559,6 +559,13 @@ body {
   background-image: url('./assets/rua.png');
 }
 
+/* Rua com ciclovia: mesma textura de asfalto, com a faixa vermelha na
+   beirada de baixo. Seletor duplo para vencer o .segment.rua acima, que tem
+   a mesma especificidade e vem antes. */
+.segment.rua.com-ciclovia {
+  background-image: url('./assets/ciclovia.png');
+}
+
 /* --- 2. A FAIXA DE PEDESTRE --- */
 .crosswalk {
   position: absolute;
@@ -632,6 +639,42 @@ body {
      ao interpolar. */
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+}
+
+/* --- A BICICLETA DA CICLOVIA ---
+   Usa o mesmo .vehicle dos carros por fora (é ela quem tem a animação
+   `drive` e as regras de pausa), e este elemento por dentro só desenha e
+   pedala. A arte vem numa folha de 4 quadros lado a lado: a caixa mostra um
+   quadro por vez e a animação `pedalar` empurra o fundo de quadro em quadro,
+   em passos secos — sem meio-termo entre um desenho e outro, que é como
+   funciona a animação de sprite.
+
+   `--ciclista-quadro` (a largura de um quadro) vem do componente, e tanto o
+   tamanho da caixa quanto o passo do fundo saem dela: mudar a escala da
+   bicicleta é mexer num número só. */
+.ciclista {
+  width: var(--ciclista-quadro);
+  /* Proporção de um quadro: (677/4) x 369 na folha. */
+  height: calc(var(--ciclista-quadro) * 2.181);
+  background-image: url('./assets/ciclista.png');
+  background-size: calc(var(--ciclista-quadro) * 4) 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  /* O desenho aponta para cima, como o da moto; girar 90° o põe andando
+     para a direita sem espelhar a imagem. */
+  transform: rotate(90deg);
+  animation: pedalar 0.4s steps(4) infinite;
+}
+
+@keyframes pedalar {
+  to { background-position-x: calc(var(--ciclista-quadro) * -4); }
+}
+
+/* A pedalada congela junto com o resto quando o jogo para. Sem isto ela
+   continuaria pedalando parada no meio da rua, na pausa e na derrota. */
+.game-arena.pausado .ciclista,
+.game-arena.morrendo .ciclista {
+  animation-play-state: paused !important;
 }
 
 /* O fim da travessia acompanha a largura da arena, via --drive-fim, que o
@@ -1452,4 +1495,265 @@ body {
   color: white;
   font-size: 1.2rem;
   margin-bottom: 20px;
+}
+
+/* ==================================================== */
+/* --- CUTSCENE DE DERROTA (o céu) -------------------- */
+/* ==================================================== */
+
+/* A partida não acaba mais num corte seco para o painel. Quando a última
+   vida cai, o jogo congela no quadro do acidente, o boneco pisca ali mesmo,
+   as nuvens tomam a tela, a cena vira o céu e o fantasma sobe. As fases e o
+   relógio estão em CenaDeDerrota.jsx / GameArena.jsx; aqui está só o
+   desenho de cada uma.
+
+   Camada 95: acima do HUD (90), abaixo dos modais (100). É de propósito que
+   as nuvens engulam o placar — a partir dali ele já não é jogo, é cena. */
+.cena-derrota {
+  position: absolute;
+  inset: 0;
+  z-index: 95;
+  overflow: hidden;
+  /* Cena, não interface: nenhum clique pode ser engolido por ela (o painel
+     de fim de jogo, que vem por cima, é irmão e continua clicável). */
+  pointer-events: none;
+}
+
+/* O boneco pisca onde caiu — o piscar do arcade, ligado/desligado, sem
+   suavidade no meio. Dura enquanto o gameState for 'morrendo'. */
+.pedestrian.morrendo {
+  animation: piscarDerrota 0.22s steps(1, end) infinite;
+}
+
+@keyframes piscarDerrota {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.1; }
+}
+
+/* O trânsito para junto com ele: mesma regra da pausa, que já congela a
+   animação CSS dos carros no lugar em vez de deixá-la correndo por baixo. */
+.game-arena.morrendo .vehicle,
+.game-arena.morrendo .giroflex-piscando {
+  animation-play-state: paused !important;
+}
+
+/* Clarão da batida, uma vez só, no primeiro tempo da cutscene. */
+.cena-derrota-flash {
+  position: absolute;
+  inset: 0;
+  background: rgba(231, 76, 60, 0.45);
+  opacity: 0;
+}
+
+.cena-derrota--piscando .cena-derrota-flash {
+  animation: flashDerrota 0.9s ease-out forwards;
+}
+
+@keyframes flashDerrota {
+  0% { opacity: 0.9; }
+  30% { opacity: 0.15; }
+  55% { opacity: 0.5; }
+  100% { opacity: 0; }
+}
+
+/* O céu já está montado desde o começo, invisível: assim ele entra sem
+   esperar o download da imagem justo no quadro em que as nuvens abrem.
+   A troca em si é RÁPIDA (0,25s) e acontece por baixo do véu, que nesse
+   momento está fechado: o que se vê dissolvendo devagar é o véu, revelando
+   um céu que já está inteiro ali. Se o céu é que entrasse devagar, a arena
+   congelada apareceria por transparência no meio do caminho. */
+.cena-derrota-ceu {
+  position: absolute;
+  /* A arte não preenche o PNG inteiro: sobra margem transparente em volta —
+     8,7% à esquerda, 8,3% à direita, 10,4% em cima e 13,6% embaixo, medido
+     no arquivo. Com a caixa do tamanho da arena, o `cover` encaixava a
+     IMAGEM (margem incluída) e a cena congelada aparecia numa moldura em
+     volta do céu.
+     Cada lado da caixa é então empurrado para fora na razão
+     "margem daquele lado / tamanho da arte" — 8,7/83,0 = 10,5% à esquerda,
+     13,6/76,0 = 17,9% embaixo, e assim por diante. Isso faz o `cover`
+     encaixar a ARTE na arena; a margem cai fora do overflow: hidden do pai.
+     Tudo em %, então continua valendo em qualquer largura de arena (que
+     muda com a proporção da tela). O 1,5 ponto a mais em cada lado é folga
+     contra arredondamento — corta um naco a mais de céu, e só. */
+  left: -12%;
+  right: -11.5%;
+  top: -15.2%;
+  bottom: -19.4%;
+  /* O gradiente é a segunda camada, por baixo da imagem: se numa proporção
+     de tela esquisita a arte ainda deixar uma nesga descoberta, o que
+     aparece é céu na cor certa, e não a rua congelada. */
+  background-image: url('./assets/ceu.png'), linear-gradient(180deg, #21396c 0%, #3a6fae 45%, #bcd8f2 100%);
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+  opacity: 0;
+  transition: opacity 0.25s ease-in;
+}
+
+.cena-derrota--ceu .cena-derrota-ceu,
+.cena-derrota--fim .cena-derrota-ceu {
+  opacity: 1;
+}
+
+/* O véu que fecha as frestas entre as nuvens (a arte tem fundo
+   transparente). Fecha no fim da entrada delas e se dissolve devagar
+   quando o céu assume. */
+.cena-derrota-veu {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #eaf2fb 0%, #ffffff 45%, #dbe8f7 100%);
+  opacity: 0;
+  transition: opacity 0.7s ease;
+}
+
+.cena-derrota--nuvens .cena-derrota-veu {
+  opacity: 1;
+  transition-delay: 0.6s;
+}
+
+.cena-derrota--ceu .cena-derrota-veu,
+.cena-derrota--fim .cena-derrota-veu {
+  opacity: 0;
+  transition-duration: 1.5s;
+}
+
+.cena-derrota-nuvem {
+  position: absolute;
+  /* A arte é pixel art como o resto do jogo; sem isto, ampliada, ela
+     desmancha em borrão ao lado dos sprites nítidos. */
+  image-rendering: pixelated;
+  opacity: 0;
+  /* Cada nuvem começa fora da tela, no lado que a CenaDeDerrota escolheu, e
+     recebe um transition-delay próprio — é o atraso entre elas que faz o
+     céu parecer se fechar em camadas, e não um bloco só. */
+  transform: var(--entrada);
+  transition: transform 1s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s ease;
+}
+
+.cena-derrota--nuvens .cena-derrota-nuvem {
+  transform: none;
+  opacity: 1;
+}
+
+/* Abertura: as nuvens se afastam e crescem, como se a câmera atravessasse o
+   meio delas rumo ao céu. Mais lento que a entrada, de propósito. */
+.cena-derrota--ceu .cena-derrota-nuvem,
+.cena-derrota--fim .cena-derrota-nuvem {
+  transform: var(--saida);
+  opacity: 0;
+  /* Na ordem declarada no atalho lá de cima: transform e depois opacity. O
+     atraso de cada nuvem continua vindo do style inline, que ganha da folha
+     de estilo — a abertura sai escalonada igual à entrada. */
+  transition-duration: 2.1s, 1.9s;
+}
+
+/* O fantasma: o mesmo boneco parado do jogo, translúcido, subindo devagar.
+   A subida continua correndo por trás do painel de fim de jogo — ele não
+   para de repente quando o painel entra. */
+.cena-derrota-fantasma {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 46px;
+  image-rendering: pixelated;
+  /* Azul-claro por cima do sprite, para ele ler como assombração e não como
+     o boneco de sempre meio apagado. */
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.95)) saturate(0.3) brightness(1.3);
+  animation: fantasmaSubindo 6s ease-out forwards;
+}
+
+@keyframes fantasmaSubindo {
+  0% {
+    transform: translate(-50%, 30px) scale(1.05);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate(-50%, -320px) scale(0.72);
+    opacity: 0.16;
+  }
+}
+
+.cena-derrota-mensagem {
+  position: absolute;
+  left: 50%;
+  /* Bem no alto: é por baixo dela que o fantasma sobe, e no terço superior
+     o céu é escuro — o texto branco lê com folga ali. */
+  top: 10%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  text-align: center;
+  font-family: 'Baloo 2', 'Segoe UI', sans-serif;
+  animation: fadeIn 1.2s ease-in;
+  transition: opacity 0.5s ease;
+}
+
+/* Sai de cena quando o painel entra: ele já traz o "Fim de Jogo!", e as duas
+   mensagens juntas na mesma tela só brigariam por atenção. */
+.cena-derrota--fim .cena-derrota-mensagem {
+  opacity: 0;
+}
+
+.cena-derrota-mensagem strong {
+  font-size: 2rem;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 3px 0 #1b3a6b, 0 0 22px rgba(27, 58, 107, 0.55);
+}
+
+.cena-derrota-mensagem span {
+  font-size: 0.95rem;
+  color: #eaf2fb;
+  text-shadow: 0 2px 4px rgba(27, 58, 107, 0.7);
+}
+
+/* No fim de jogo o painel entra por cima do céu, e não do escuro de sempre:
+   o fundo escuro cheio apagaria a cena que a cutscene acabou de montar. */
+.modal-overlay.nit-overlay-derrota {
+  background-color: rgba(16, 42, 76, 0.32);
+  animation: fadeIn 0.5s ease-in;
+}
+
+/* Mesma leitura do resto do arquivo: quem pede menos movimento recebe a
+   mesma sequência, só que trocando o deslocamento por aparecer e sumir. O
+   fim de jogo continua o mesmo — muda só o caminho até ele. */
+@media (prefers-reduced-motion: reduce) {
+  .pedestrian.morrendo {
+    animation: none;
+    opacity: 0.45;
+  }
+
+  .cena-derrota-flash,
+  .cena-derrota--piscando .cena-derrota-flash {
+    animation: none;
+    opacity: 0;
+  }
+
+  .cena-derrota-nuvem {
+    transform: none;
+    transition: opacity 0.5s ease;
+  }
+
+  .cena-derrota--ceu .cena-derrota-nuvem,
+  .cena-derrota--fim .cena-derrota-nuvem {
+    transform: none;
+  }
+
+  .cena-derrota-fantasma {
+    animation: none;
+    opacity: 0.4;
+    transform: translate(-50%, -150px);
+  }
+
+  .cena-derrota-mensagem,
+  .modal-overlay.nit-overlay-derrota {
+    animation: none;
+  }
 }

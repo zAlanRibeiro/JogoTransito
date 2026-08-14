@@ -78,6 +78,26 @@ forçado e não há punição.
 chegar na calçada seguinte. Ficar preso na rua quando o sinal abre custa
 pontos — ou uma vida, se não houver pontos a descontar.
 
+**Ciclovia.** De vez em quando uma rua tem ciclovia — a faixa vermelha na
+beirada, visível de longe. A bicicleta que passa nela **não para no sinal**:
+é a lição de que sinal aberto para o pedestre não quer dizer via livre. A
+chance de uma rua ter ciclovia depende de quantas ruas se passaram desde a
+última: 1% enquanto não completar 20 ruas, 20% ao chegar nelas, e mais 10
+pontos a cada 10 ruas. Quando uma aparece, a contagem recomeça (a regra está
+em `bicicleta.js`, com testes).
+
+A bicicleta atropela e custa uma vida, como qualquer veículo. A colisão dela
+é conferida contra a **linha dos pés** do boneco, e não contra a caixa dele:
+a caixa cobre só a parte de cima do sprite, e uma bicicleta que corre rente
+ao chão passaria por baixo sem nunca encostar. Quem espera o sinal parado na
+guia fica a salvo — o perigo é o passo para dentro da ciclovia.
+
+A ciclovia só cai na rua que **encosta na calçada** — a primeira de cada par.
+Na outra a via tem asfalto dos dois lados, e uma ciclovia ali estaria no meio
+da pista. Nessa rua o trânsito também muda: o **ônibus não passa** (é o mais
+largo da frota e cobriria a faixa inteira) e os outros veículos correm um
+pouco mais para dentro da via, deixando a beirada para a bicicleta.
+
 **Chamar o guarda.** Quando um veículo para em cima da faixa, o botão
 "Chamar Guarda" (ou `E`) aciona um agente que multa o infrator e libera a
 passagem, com um pequeno bônus de pontos. Cada faixa só pode ser atendida
@@ -86,7 +106,11 @@ com um valor alto compensava mais caçar carro parado do que praticar a
 travessia segura — o oposto da lição.
 
 **Vidas.** São três. Ao perder uma, o jogador volta para a calçada com uma
-janela curta de invulnerabilidade, piscando.
+janela curta de invulnerabilidade, piscando. A última é a exceção: em vez de
+voltar, a cena congela no lugar do acidente e entra a cutscene de derrota —
+o boneco pisca ali, as nuvens tomam a tela, o cenário vira o céu e ele sobe
+como fantasma, com a mensagem de que perdeu. O painel de fim de partida
+aparece no fim dela, com o céu de fundo.
 
 **Dificuldade.** Conforme a pontuação sobe, os sinais fecham mais cedo e o
 trânsito fica mais rápido, até um teto que mantém a travessia possível.
@@ -95,6 +119,12 @@ trânsito fica mais rápido, até um teto que mantém a travessia possível.
 o jogador errou, separado entre leves (só custaram pontos) e pesadas
 (custaram vida). É reforço pedagógico: o aviso durante o jogo passa rápido, o
 resumo fica.
+
+**Ver a ciclovia sem esperar.** Como ela é rara de propósito, existe um
+interruptor de QA: no console do navegador, `localStorage.setItem(
+'travessiaSegura_cicloviaSempre', '1')` e recarregue — toda rua elegível
+passa a ter ciclovia. Só a frequência muda; a bicicleta é a mesma. Para
+voltar ao normal, `localStorage.removeItem('travessiaSegura_cicloviaSempre')`.
 
 **Som.** Efeitos sintetizados na hora com a Web Audio API — não há arquivo de
 áudio no projeto. Dá para silenciar pelo botão do HUD, e a escolha fica salva.
@@ -114,6 +144,8 @@ src/
     gameGrid.js                 Fonte única do tabuleiro (segmentos e faixas)
     difficulty.js               Progressão de dificuldade
     furarSinal.js               Regra do carro que avança o vermelho
+    bicicleta.js                Regra de quando uma rua ganha ciclovia
+    velocidadeDoTransito.js     Duração da travessia conforme a largura da tela
     infracoes.js                Catálogo de infrações e agrupamento
     audio/
       motorDeAudio.js           Tijolos de síntese (tom, ruído, envelope, mudo)
