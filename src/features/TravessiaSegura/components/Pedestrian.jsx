@@ -6,7 +6,7 @@ import bonecoAndando3 from '../../../assets/bonecoAndando3.png';
 
 const cicloDeCaminhada = [bonecoAndando1, bonecoAndando2, bonecoAndando3, bonecoAndando2];
 
-export default function Pedestrian({ isWalking, isRespawning = false, x, y = 0, zIndex = 80, registerRef }) {
+export default function Pedestrian({ isWalking, isRespawning = false, isMorrendo = false, x, y = 0, zIndex = 80, registerRef }) {
   const [frameIndex, setFrameIndex] = useState(0);
 
   // Parado não anima: o efeito simplesmente não liga o relógio. A versão
@@ -29,7 +29,9 @@ export default function Pedestrian({ isWalking, isRespawning = false, x, y = 0, 
 
   return (
     <div
-      className={`pedestrian ${isRespawning ? 'respawning' : ''}`}
+      // 'morrendo': a última vida acabou e o boneco pisca parado onde caiu,
+      // até as nuvens da cutscene de derrota cobrirem a cena.
+      className={`pedestrian ${isRespawning ? 'respawning' : ''} ${isMorrendo ? 'morrendo' : ''}`}
       ref={registerRef}
       style={{
         bottom: `${20 + y}px`, // 20px de folga na calçada inicial + progresso real no tabuleiro
