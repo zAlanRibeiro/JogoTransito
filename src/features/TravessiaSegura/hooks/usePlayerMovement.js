@@ -85,6 +85,15 @@ export default function usePlayerMovement(toqueRef, lightState, onLoseLife, isGa
   const [isRespawning, setIsRespawning] = useState(false);
   const lastMistakeTime = useRef(0);
   const invulneravelAteRef = useRef(0);
+  // Depois de perder uma vida, o comando precisa ser REFEITO: enquanto o
+  // jogador não soltar o que estava segurando, o boneco fica parado.
+  //
+  // No celular é o que impede a cascata. O dedo continua no joystick durante
+  // a piscada do respawn, e o joystick só avisa quando a direção MUDA (ver
+  // Joystick.jsx) — então, no instante em que a invulnerabilidade acabava, o
+  // boneco saía andando sozinho para dentro da mesma rua, quase sempre para
+  // bater no mesmo carro. No teclado acontecia o mesmo com a tecla segurada.
+  const precisaSoltarRef = useRef(false);
   // Espelha isRespawning pra decidir, dentro do loop de animação, se o
   // estado precisa mudar — evita chamar setState 60x por segundo.
   const respawnAtivoRef = useRef(false);
@@ -94,6 +103,7 @@ export default function usePlayerMovement(toqueRef, lightState, onLoseLife, isGa
     setPosition(posRef.current);
     invulneravelAteRef.current = 0;
     respawnAtivoRef.current = false;
+    precisaSoltarRef.current = false;
     setIsRespawning(false);
   }, []);
 
@@ -108,6 +118,7 @@ export default function usePlayerMovement(toqueRef, lightState, onLoseLife, isGa
     setPosition(posRef.current);
     invulneravelAteRef.current = Date.now() + DURACAO_RESPAWN_MS;
     respawnAtivoRef.current = true;
+    precisaSoltarRef.current = true;
     setIsRespawning(true);
     // larguraDaArena entra na lista porque o respawn passou a devolver o
     // jogador ao meio da arena, e o meio depende dela. Sem a dependência,
@@ -158,9 +169,28 @@ export default function usePlayerMovement(toqueRef, lightState, onLoseLife, isGa
         setIsRespawning(false);
       }
 
+      const toque = toqueRef?.current ?? PARADO;
+      const algumComando =
+        acoes.frente || acoes.tras || acoes.esquerda || acoes.direita ||
+        toque.frente || toque.tras || toque.esquerda || toque.direita;
+
+      // Soltou o comando que estava valendo quando perdeu a vida: pode voltar
+      // a andar. A conferência vem ANTES da janela de invulnerabilidade de
+      // propósito — quem solta o joystick durante a piscada já sai andando
+      // assim que ela termina, sem ter de soltar de novo.
+      if (precisaSoltarRef.current && !algumComando) precisaSoltarRef.current = false;
+
       // Durante o respawn o jogador fica parado e intocável: nem anda nem
       // sofre colisão, senão voltaria a bater no mesmo carro imediatamente.
       if (agora < invulneravelAteRef.current) {
+        setIsWalking(false);
+        animationFrame = requestAnimationFrame(loop);
+        return;
+      }
+
+      // Ainda segurando o mesmo comando de antes da batida: o boneco espera o
+      // gesto ser refeito em vez de sair andando sozinho para dentro da rua.
+      if (precisaSoltarRef.current) {
         setIsWalking(false);
         animationFrame = requestAnimationFrame(loop);
         return;
@@ -170,7 +200,6 @@ export default function usePlayerMovement(toqueRef, lightState, onLoseLife, isGa
       let dy = 0;
       const speed = VELOCIDADE_POR_SEGUNDO * decorrido;
 
-      const toque = toqueRef?.current ?? PARADO;
       const querAndarFrente = acoes.frente || toque.frente;
       const currentY = posRef.current.y;
 
