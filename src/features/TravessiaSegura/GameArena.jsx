@@ -15,11 +15,14 @@ import { pedirPaisagem } from './hooks/useOrientacao';
 import MainMenu from './components/MainMenu';
 import ComandosModal from './components/ComandosModal';
 import ResumoInfracoes from './components/ResumoInfracoes';
+import CenaDeDerrota from './components/CenaDeDerrota';
+import Ciclista from './components/Ciclista';
 import { INFRACOES_ZERADAS, totalDeInfracoes } from './infracoes';
 import { StarIcon, HeartIcon, HourglassIcon, CheckIcon, WarningIcon, GraveWarningIcon, InfractionIcon, TrophyIcon, RestartIcon, PauseIcon, PlayIcon, GamepadIcon, HomeIcon, SomIcon } from './components/HudIcons';
 import { SEGMENT_HEIGHT, mod3, segmentType, CROSSWALK_WIDTH, estaNaCalcadaComMargem, crosswalkIndexFor } from './gameGrid';
 import { calcularDificuldade } from './difficulty';
 import { sortearRuaQueFura } from './furarSinal';
+import { criarSorteadorDeCiclovias, sorteioDeCiclovias } from './bicicleta';
 import coneImg from '../../assets/cone.png';
 
 const ARENA_HEIGHT = 400;
@@ -36,6 +39,12 @@ const RENDER_AHEAD = 8;
 const BASE_DO_SEMAFORO = 116;
 
 const CHAVE_RECORDE = 'travessiaSegura_recorde';
+
+// Cutscene de derrota, em milissegundos por fase (ver CenaDeDerrota.jsx).
+// A soma é o tempo entre a última vida perdida e o painel de fim de jogo.
+const DERROTA_PISCADA_MS = 1000;
+const DERROTA_NUVENS_MS = 1400;
+const DERROTA_CEU_MS = 2200;
 
 // O acesso ao localStorage pode LANÇAR (aba anônima restrita, iframe com
 // sandbox, política corporativa) — não só devolver null. Como isto roda no
@@ -86,7 +95,19 @@ function camadaDoSegmento(i, playerY) {
 export default function GameArena() {
   const arenaRef = useRef(null);
   const playerElRef = useRef(null);
+  // Guarda os elementos que atropelam: os veículos, com o índice da faixa
+  // como chave, e as bicicletas, com chave de texto ('ciclista-3'). Quem
+  // itera tudo é o radar de colisão; quem só quer carro filtra pela chave.
   const vehicleElsRef = useRef(new Map());
+
+  // Quais ruas do trajeto têm ciclovia (e, portanto, bicicleta passando).
+  //
+  // Em estado, e não numa ref, porque quem pergunta é o RENDER (a cena
+  // precisa saber se pinta a faixa vermelha naquele asfalto) — e ler ref
+  // durante o render é justamente o que o React não garante. O valor é uma
+  // função de identidade estável; ela só é trocada ao começar uma partida
+  // nova, que é quando o trajeto muda de verdade.
+  const [temCiclovia, setTemCiclovia] = useState(() => criarSorteadorDeCiclovias(sorteioDeCiclovias()));
   // A largura da arena acompanha a proporção da tela; a altura é fixa,
   // porque é dela que sai o sistema de coordenadas do jogo.
   const { largura: larguraDaArena, escala: scale } = useArenaResponsiva(ARENA_HEIGHT, {
@@ -119,6 +140,13 @@ export default function GameArena() {
   const toqueRef = useRef({ frente: false, tras: false, esquerda: false, direita: false });
   const ehDispositivoDeToque = typeof window !== 'undefined' && (('ontouchstart' in window) || navigator.maxTouchPoints > 0);
   const [vidas, setVidas] = useState(3);
+  // Espelho de `vidas` para o handleLoseLife saber, FORA do atualizador do
+  // setState, se esta perda foi a última — é isso que decide entre voltar
+  // pra calçada e congelar a cena onde o jogador morreu.
+  const vidasRef = useRef(3);
+  // Tempo da cutscene de derrota: 'piscando' | 'nuvens' | 'ceu' | 'fim'.
+  // Só é olhado quando o gameState é 'morrendo' ou 'gameover'.
+  const [faseDaDerrota, setFaseDaDerrota] = useState('piscando');
   // aviso: infração pontual, some sozinha depois de alguns segundos.
   // infracoes: contagem por tipo, persiste a partida inteira — vira o
   // resumo mostrado no fim de jogo (reforço pedagógico: o jogador vê
@@ -183,11 +211,16 @@ export default function GameArena() {
     // Fora do setVidas: o atualizador pode ser reexecutado pelo React (e é,
     // duas vezes, no StrictMode), o que faria o som tocar em dobro.
     tocar(motivo === 'carro' ? 'batida' : 'avisoGrave');
+    const ehAUltimaVida = vidasRef.current <= 1;
     setVidas((vAtual) => {
       const novasVidas = vAtual - 1;
 
       if (novasVidas <= 0) {
-        setGameState('gameover');
+        // 'morrendo' é a cutscene; o 'gameover' (com o painel) só vem no fim
+        // dela. O jogo NÃO volta pra calçada aqui: a cena fica parada
+        // exatamente onde a última vida acabou.
+        setGameState('morrendo');
+        setFaseDaDerrota('piscando');
         setAviso(null);
         return 0;
       }
@@ -204,7 +237,9 @@ export default function GameArena() {
     // Volta pra calçada e pisca: qualquer perda de vida devolve o jogador
     // pro início do ciclo, com uma janela em que ele não pode ser atingido
     // de novo (senão perderia várias vidas encostado no mesmo carro).
-    respawnRef.current?.();
+    // Na última vida não há pra onde voltar — o boneco fica onde caiu, que é
+    // de onde a cutscene de derrota parte.
+    if (!ehAUltimaVida) respawnRef.current?.();
   }, [registrarInfracao, mostrarAviso]);
 
   const { position, isWalking, isRespawning, resetPosition, respawnNaCalcada } = usePlayerMovement(
@@ -290,6 +325,7 @@ export default function GameArena() {
   // jogador pisa fora dela.
   useEffect(() => {
     respawnRef.current = respawnNaCalcada;
+    vidasRef.current = vidas;
     playerYRef.current = playerY;
     creditedRawScoreRef.current = creditedRawScore;
     scoreRef.current = score;
@@ -417,20 +453,31 @@ export default function GameArena() {
     qtdGuardasRef.current = guardasAtivos.length;
   }, [guardasAtivos]);
 
-  // Fim de partida.
+  // Vitória. A derrota tem som próprio, logo abaixo: ela não toca mais junto
+  // com a troca de gameState, e sim no meio da cutscene.
   const fimAnunciadoRef = useRef(null);
   useEffect(() => {
-    const ehFim = gameState === 'gameover' || gameState === 'won';
-    if (!ehFim) {
+    if (gameState !== 'won') {
       fimAnunciadoRef.current = null;
       return;
     }
     if (fimAnunciadoRef.current === gameState) return;
     fimAnunciadoRef.current = gameState;
-    // A vitória entra depois da cutscene; a derrota, logo após a batida que
-    // tirou a última vida, então um respiro evita que os dois se atropelem.
-    setTimeout(() => tocar(gameState === 'won' ? 'vitoria' : 'derrota'), 350);
+    // Ela entra depois da cutscene de travessia; o respiro evita que os dois
+    // se atropelem.
+    setTimeout(() => tocar('vitoria'), 350);
   }, [gameState]);
+
+  // Derrota: toca quando a cena vira o céu, e não no instante da batida —
+  // ali a batida acabou de soar, e as duas juntas viravam um borrão. No céu
+  // o acorde cai no silêncio, junto com o fantasma subindo.
+  const derrotaAnunciadaRef = useRef(false);
+  useEffect(() => {
+    if (faseDaDerrota === 'piscando') derrotaAnunciadaRef.current = false;
+    if (faseDaDerrota !== 'ceu' || derrotaAnunciadaRef.current) return;
+    derrotaAnunciadaRef.current = true;
+    tocar('derrota');
+  }, [faseDaDerrota]);
 
   useEffect(() => {
     if (score > prevScoreRef.current) {
@@ -475,6 +522,27 @@ export default function GameArena() {
     }
   }, [score, gameState, hasWonOnce]);
 
+  // Relógio da cutscene de derrota. Cada disparo só avança a fase — quem
+  // desenha é a CenaDeDerrota, que reage à classe da fase. O último tempo
+  // fecha em 'gameover', que é quando o painel com pontuação e recorde entra
+  // por cima do céu.
+  useEffect(() => {
+    if (gameState !== 'morrendo') return;
+
+    const nuvens = setTimeout(() => setFaseDaDerrota('nuvens'), DERROTA_PISCADA_MS);
+    const ceu = setTimeout(() => setFaseDaDerrota('ceu'), DERROTA_PISCADA_MS + DERROTA_NUVENS_MS);
+    const fim = setTimeout(() => {
+      setFaseDaDerrota('fim');
+      setGameState('gameover');
+    }, DERROTA_PISCADA_MS + DERROTA_NUVENS_MS + DERROTA_CEU_MS);
+
+    return () => {
+      clearTimeout(nuvens);
+      clearTimeout(ceu);
+      clearTimeout(fim);
+    };
+  }, [gameState]);
+
   // Só GRAVA o recorde; não mexe em estado. O valor mostrado é derivado logo
   // acima, então não havia nada para o efeito guardar — ele mantinha em
   // estado um número que já dava para calcular, ao custo de um render extra
@@ -493,6 +561,7 @@ export default function GameArena() {
     setInfracoes(INFRACOES_ZERADAS);
     setPausado(false);
     setMostrarResumoFinal(false);
+    setFaseDaDerrota('piscando');
     ultimoTipoSegmentoRef.current = 'calcada';
     saiuDaFaixaRef.current = false;
     resetPosition();
@@ -500,6 +569,8 @@ export default function GameArena() {
     setTimeLeft(5);
     setRuaQueFura(null);
     ultimaFuradaRef.current = -Infinity;
+    // Trajeto novo: as ciclovias caem em outras ruas na próxima partida.
+    setTemCiclovia(() => criarSorteadorDeCiclovias(sorteioDeCiclovias()));
     // Uma partida nova começa no verde: sem zerar isto, a volta de um
     // gameover que terminou no vermelho soaria como "o sinal fechou".
     sinalAnteriorRef.current = 'green';
@@ -522,6 +593,7 @@ export default function GameArena() {
     setInfracoes(INFRACOES_ZERADAS);
     setPausado(false);
     setMostrarResumoFinal(false);
+    setFaseDaDerrota('piscando');
     ultimoTipoSegmentoRef.current = 'calcada';
     saiuDaFaixaRef.current = false;
     resetPosition();
@@ -529,6 +601,8 @@ export default function GameArena() {
     setTimeLeft(5);
     setRuaQueFura(null);
     ultimaFuradaRef.current = -Infinity;
+    // Trajeto novo: as ciclovias caem em outras ruas na próxima partida.
+    setTemCiclovia(() => criarSorteadorDeCiclovias(sorteioDeCiclovias()));
     sinalAnteriorRef.current = 'green';
     ultimoBipRef.current = '';
     setHasWonOnce(false);
@@ -635,9 +709,19 @@ export default function GameArena() {
     visible.push(i);
   }
 
+  // Durante a cutscene de derrota a partida acabou, mas a cena continua na
+  // tela, congelada. O painel do sinal e o contador de infrações seguem
+  // visíveis até as nuvens cobrirem tudo — some-los no mesmo quadro da
+  // batida faria a tela parecer desmontada, e não parada.
+  const cenaCongelada = gameState === 'morrendo';
+  const emPartida = gameState === 'playing' || cenaCongelada;
+  const naDerrota = cenaCongelada || gameState === 'gameover';
+
   return (
     <div
-      className={`game-arena ${pausado ? 'pausado' : ''}`}
+      // 'morrendo' congela os carros no lugar (mesma regra do pausado, no
+      // App.css): a cena inteira para no quadro em que a vida acabou.
+      className={`game-arena ${pausado ? 'pausado' : ''} ${cenaCongelada ? 'morrendo' : ''}`}
       ref={arenaRef}
       style={{
         // `zoom` e não `transform: scale()`: o transform borra a pixel art em
@@ -686,7 +770,7 @@ export default function GameArena() {
             <HeartIcon key={i} size={17} filled={i < vidas} />
           ))}
         </div>
-        {gameState === 'playing' && (
+        {emPartida && (
           <div className="infracoes-board" title="Infrações cometidas nesta partida">
             <InfractionIcon size={15} /> {totalInfracoes}
           </div>
@@ -710,7 +794,7 @@ export default function GameArena() {
         </button>
       </div>
 
-      {gameState === 'playing' && (
+      {emPartida && (
         <div
           className={`signal-badge ${
             lightState === 'red' ? 'state-go' : lightState === 'yellow' ? 'state-caution' : 'state-wait'
@@ -850,8 +934,12 @@ export default function GameArena() {
         <ComandosModal onClose={() => setMostrarComandos(false)} zIndex={120} />
       )}
 
+      {/* A cutscene e, depois dela, o céu que fica de fundo no fim de jogo.
+          Entre o HUD (90) e os modais (100). */}
+      {naDerrota && <CenaDeDerrota fase={faseDaDerrota} />}
+
       {gameState === 'gameover' && (
-        <div className="modal-overlay" style={{ zIndex: 100 }}>
+        <div className="modal-overlay nit-overlay-derrota" style={{ zIndex: 100 }}>
           <div
             className={`modal-content error nit-gameover ${totalInfracoes > 0 ? 'nit-gameover--com-resumo' : ''}`}
             role="dialog"
@@ -926,10 +1014,15 @@ export default function GameArena() {
       <div className={`scene ${gameState === 'cutscene' || gameState === 'won' ? 'is-cutscene' : ''}`}>
         {visible.map((i) => {
           const type = segmentType(i);
+          // A rua com ciclovia troca a textura do asfalto por uma com a
+          // faixa vermelha na beirada. A faixa aparece bem antes de a
+          // bicicleta entrar na tela, e é essa a intenção: ela é o aviso de
+          // que ali pode vir alguém que não para no sinal.
+          const comCiclovia = type === 'rua' && temCiclovia(i);
           return (
             <div
               key={`bg-${i}`}
-              className={`segment ${type}`}
+              className={`segment ${type} ${comCiclovia ? 'com-ciclovia' : ''}`}
               style={{ 
                 position: 'absolute',
                 width: '100%',
@@ -1052,13 +1145,51 @@ export default function GameArena() {
                     seed={i}
                     duracaoCarro={dificuldade.duracaoCarro}
                     larguraDaArena={larguraDaArena}
+                    // Na rua com ciclovia o trânsito muda: sem ônibus, e
+                    // todo mundo desviando um pouco para dentro da via para
+                    // não passar por cima da bicicleta.
+                    comCiclovia={temCiclovia(i)}
                     registerRef={(el) => {
                       if (el) vehicleElsRef.current.set(i, el);
                       else vehicleElsRef.current.delete(i);
                     }}
                   />
                 </div>
-                
+
+                {/* A bicicleta da ciclovia. Fica numa camada própria, e não
+                    dentro do car-container, porque ela anda na beirada de
+                    baixo da rua: pela profundidade da cena (ver
+                    camadaPorProfundidade), quem está mais embaixo aparece na
+                    frente — inclusive na frente do carro da mesma rua.
+                    E não é interditada pelo guarda: o agente para o carro,
+                    a ciclovia continua correndo. */}
+                {temCiclovia(i) && (
+                  <div
+                    className="ciclovia-container"
+                    data-ciclovia-index={i}
+                    style={{
+                      position: 'absolute',
+                      width: '100%',
+                      top: 0,
+                      height: `${SEGMENT_HEIGHT}px`,
+                      transform: `translateY(${segmentTop(i, playerY)}px)`,
+                      willChange: 'transform',
+                      zIndex: camadaPorProfundidade(segmentTop(i, playerY) + SEGMENT_HEIGHT - 6),
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <Ciclista
+                      seed={i}
+                      duracaoCarro={dificuldade.duracaoCarro}
+                      larguraDaArena={larguraDaArena}
+                      registerRef={(el) => {
+                        if (el) vehicleElsRef.current.set(`ciclista-${i}`, el);
+                        else vehicleElsRef.current.delete(`ciclista-${i}`);
+                      }}
+                    />
+                  </div>
+                )}
+
                 {isViaInterditada && (
                   <div
                     style={{ 
@@ -1119,6 +1250,7 @@ export default function GameArena() {
         <Pedestrian
           isWalking={gameState === 'cutscene' ? true : isWalking}
           isRespawning={isRespawning}
+          isMorrendo={cenaCongelada}
           x={playerX}
           y={PLAYER_SCREEN_BOTTOM - 20}
           zIndex={camadaPorProfundidade(PLAYER_BASE_Y)}
