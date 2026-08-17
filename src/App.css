@@ -1,4 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
+/* A Baloo 2 mora AQUI DENTRO, e não no Google Fonts.
+ *
+ * Antes era um @import, e um @import de folha externa bloqueia a primeira
+ * pintura: enquanto a resposta não chega, a tela fica branca. Medido no
+ * build, com o servidor de fontes pendurado, o menu levava 6.498ms para
+ * aparecer contra 406ms com rede boa — seis segundos e meio de tela branca
+ * numa sala de aula com internet ruim, que é justamente onde este jogo roda.
+ *
+ * O arquivo é a fonte VARIÁVEL, um só para os pesos 600 a 800 (o Google
+ * servia o mesmo arquivo para os três), no recorte latino — que já traz os
+ * acentos do português. São 33 kB no bundle em troca de nunca mais depender
+ * da rede para desenhar a tela.
+ *
+ * A Nunito saiu junto: era importada e não era usada em lugar nenhum. */
+@font-face {
+  font-family: 'Baloo 2';
+  src: url('./assets/fonts/baloo2-latin.woff2') format('woff2');
+  font-weight: 600 800;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --nt-navy: #1e3c72;
@@ -1498,7 +1518,13 @@ body {
   text-shadow: 3px 3px 0px #e67e22, 0 0 20px rgba(241, 196, 15, 0.5);
 }
 
-.victory-panel p {
+/* Só os parágrafos DIRETOS do painel. Sem o `>`, esta regra alcançava
+   também o texto dentro do resumo de infrações, que é um componente
+   próprio com fundo claro: "Nenhuma infração. Travessia impecável!" saía
+   branco sobre cinza-claro, ilegível — e só para quem fez a travessia
+   perfeita, que é justamente quem merecia ler o elogio. A cor verde estava
+   declarada em .infracoes-limpo, mas perdia por especificidade. */
+.victory-panel > p {
   color: white;
   font-size: 1.2rem;
   margin-bottom: 20px;
