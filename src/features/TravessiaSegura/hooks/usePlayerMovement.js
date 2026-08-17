@@ -8,10 +8,11 @@ const REFERENCE_SCALE = 1.4;
 // dele, em pixels da arena.
 //
 // A caixa (.pedestrian, 42px) cobre só a parte de cima do boneco: o sprite é
-// bem mais alto e transborda para baixo. Medindo os quatro quadros da
-// caminhada, o pixel mais baixo de cada um cai entre 26 e 36px abaixo da base
-// da caixa — a variação vem da arte, em que cada quadro tem uma largura
-// diferente e portanto encolhe diferente ao ser desenhado com 28px.
+// bem mais alto e transborda para baixo. Medindo os quatro quadros, o pixel
+// mais baixo de cada um cai entre 26 e 36px abaixo da base da caixa — a
+// variação vem da arte, em que cada quadro tem uma largura diferente e
+// portanto encolhe diferente ao ser desenhado com 28px de largura (é o
+// balanço da caminhada; ver Pedestrian.jsx). A faixa cobre os dois extremos.
 //
 // Carro e ônibus são grandes e ocupam o meio da faixa: para eles a caixa
 // serve, e a calibragem visual das margens já leva em conta essa diferença.

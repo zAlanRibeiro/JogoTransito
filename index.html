@@ -3,6 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Sem esta linha o navegador pede /favicon.ico, toma 404 e mostra o
+         ícone genérico — era o que acontecia. O caminho é relativo porque o
+         jogo é publicado numa subpasta do GitHub Pages: com "/favicon.svg"
+         ele iria procurar na raiz do domínio. -->
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="theme-color" content="#1e3c72" />
+    <meta name="description" content="Travessia Segura: jogo da NITTRANS que ensina a atravessar a rua com segurança." />
     <title>Mini-Heróis do Trânsito - NitTrans</title>
   </head>
   <body>

@@ -32,10 +32,16 @@ export default function MainMenu({ onStartGame }) {
 
           <div className="nit-instructions">
             <h3>Instruções do Agente:</h3>
+            {/* Textos curtos de propósito: são cinco cartões em duas
+                colunas dentro de um cartão de altura fixa, e cada linha a
+                mais de texto empurra a última regra para fora da vista.
+                Nada de <strong> no meio da frase — o CSS o desenha como
+                bloco (é o título do cartão) e ele quebraria a linha. */}
             <ul>
-              <li>🛑 <strong>Espere o Sinal:</strong> só atravesse quando abrir — no verde e no amarelo os carros ainda passam.</li>
-              <li>⚠️ <strong>Termine a Travessia:</strong> ficar preso na rua ao fechar o sinal custa pontos ou vida.</li>
-              <li>🚧 <strong>Fique na Faixa:</strong> atravessar fora da faixa de pedestres corta seus pontos pela metade.</li>
+              <li>🛑 <strong>Espere o Sinal:</strong> no verde e no amarelo o carro ainda passa.</li>
+              <li>⚠️ <strong>Termine a Travessia:</strong> ficar preso na rua ao fechar custa pontos ou vida.</li>
+              <li>🚧 <strong>Fique na Faixa:</strong> fora dela, seus pontos valem metade.</li>
+              <li>🚲 <strong>Olhe a Ciclovia:</strong> a faixa vermelha tem bicicleta, e ela não para no sinal.</li>
               <li>🚨 <strong>Peça Reforço:</strong> carro parado na faixa? Chame o guarda (tecla E).</li>
             </ul>
           </div>

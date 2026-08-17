@@ -284,30 +284,37 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
   overflow: hidden;
 }
 
 .nit-instructions h3 {
-  margin: 0 0 6px 0;
+  margin: 0 0 4px 0;
   font-size: 12px;
   color: #333;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
+/* Cinco regras em duas colunas: a quinta ocupa a linha inteira, sozinha.
+   O espaçamento é apertado porque o cartão tem altura fixa (o menu inteiro
+   cabe na arena) e a terceira linha só entra com ele assim. */
 .nit-instructions ul {
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px 12px;
+  gap: 4px 10px;
+}
+
+.nit-instructions li:last-child {
+  grid-column: 1 / -1;
 }
 
 .nit-instructions li {
   background: #ffffff;
-  padding: 7px 11px;
+  padding: 5px 10px;
   border-radius: 6px;
   border-left: 3px solid var(--nt-navy);
   box-shadow: 0 2px 5px rgba(0,0,0,0.04);

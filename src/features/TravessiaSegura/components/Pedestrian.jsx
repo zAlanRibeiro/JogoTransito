@@ -41,7 +41,13 @@ export default function Pedestrian({ isWalking, isRespawning = false, isMorrendo
         zIndex
       }}
     >
-      {/* 👇 Alterado o width de 40px para 28px para deixar o boneco menor e mais proporcional */}
+      {/* Escalado pela LARGURA, de propósito.
+          Os quadros foram exportados com recorte justo, então cada um tem
+          largura diferente conforme o braço balança (104, 119, 108 e 122px)
+          enquanto a altura é quase a mesma nos quatro. O efeito é que o
+          boneco sobe e desce ~9px a cada 150ms enquanto anda — medido no
+          jogo. Fixar a altura tiraria esse balanço, mas a caminhada fica
+          dura; o pula-pula é o que dá vida a ela, e foi escolha mantê-lo. */}
       <img src={imagemAtual} alt="" style={{ width: '28px' }} />
     </div>
   );

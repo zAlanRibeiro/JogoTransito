@@ -121,9 +121,18 @@ test('perder uma vida com o dedo no joystick não faz o boneco sair andando sozi
   expect(await lerPosicaoY(page)).toBe(0);
 
   // Refazendo o gesto, o controle volta a responder.
-  await liberarCaminho(page);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await empurrarJoystick(page, cdp, 0, -40, 400);
+  // A pausa entre soltar e tocar de novo não é enfeite: quem percebe a
+  // soltura é o laço de animação, que roda a cada ~16ms, e o CDP consegue
+  // soltar e tocar dentro do mesmo quadro — um dedo de verdade, não.
+  await page.waitForTimeout(150);
+  // Um empurrão CURTO, que anda ~60px e para bem antes do meio-fio. Andar
+  // até a guia colocaria o resultado nas mãos do semáforo: se ele fechar no
+  // meio do caminho, o boneco tenta entrar, perde vida pela regra do sinal e
+  // volta para y=0 — e o teste falharia por um motivo que não é o dele.
+  // Aqui basta provar que o controle voltou a responder.
+  await liberarCaminho(page);
+  await empurrarJoystick(page, cdp, 0, -40, 250);
   expect(await lerPosicaoY(page)).toBeGreaterThan(0);
 });
 
