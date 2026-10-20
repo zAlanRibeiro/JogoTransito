@@ -33,9 +33,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Node 24 por causa do npm que vem junto. O 22 traz o npm 10, que desde
+      # out/2026 morre na instalação abaixo com "Cannot read properties of
+      # null (reading 'edgesOut')" ao resolver as versões novas das
+      # dependências — bug do próprio npm 10. O npm 11 (do Node 24) resolve.
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       # O package-lock.json é APAGADO de propósito antes de instalar. Isto não

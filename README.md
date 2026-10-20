@@ -11,7 +11,7 @@ chegar à praia, aos 200 pontos.
 
 ## Como rodar
 
-Requer Node.js 20 ou superior (a publicação usa a 22).
+Requer Node.js 20 ou superior (a publicação usa a 24).
 
 ```bash
 npm install
