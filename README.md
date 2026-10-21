@@ -115,6 +115,13 @@ aparece no fim dela, com o céu de fundo.
 **Dificuldade.** Conforme a pontuação sobe, os sinais fecham mais cedo e o
 trânsito fica mais rápido, até um teto que mantém a travessia possível.
 
+**Tutorial.** O botão "Ver tutorial" do menu abre oito cenas curtas, uma por
+mecânica (objetivo, sinal, terminar a travessia, faixa, carro que fura o
+sinal, ciclovia, guarda e vidas), com legendas que acompanham a ação. As
+cenas usam os sprites do jogo e são dados em função do tempo, em
+`tutorial.js`: mudou uma regra ou um valor, o roteiro muda junto. O último
+passo tem o botão "Jogar!", que já começa a partida.
+
 **Resumo de infrações.** O fim de partida mostra quantas vezes e de que tipo
 o jogador errou, separado entre leves (só custaram pontos) e pesadas
 (custaram vida). É reforço pedagógico: o aviso durante o jogo passa rápido, o
@@ -147,6 +154,7 @@ src/
     bicicleta.js                Regra de quando uma rua ganha ciclovia
     velocidadeDoTransito.js     Duração da travessia conforme a largura da tela
     infracoes.js                Catálogo de infrações e agrupamento
+    tutorial.js                 Roteiro do tutorial do menu (cenas e legendas)
     audio/
       motorDeAudio.js           Tijolos de síntese (tom, ruído, envelope, mudo)
       sons.js                   Receitas de cada efeito
