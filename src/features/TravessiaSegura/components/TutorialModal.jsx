@@ -12,6 +12,7 @@ import agente2 from '../../../assets/agente_2.png';
 import agente3 from '../../../assets/agente_3.png';
 import agente6 from '../../../assets/agente_6.png';
 import agente7 from '../../../assets/agente_7.png';
+import agente8 from '../../../assets/agente_8.png';
 import TrafficLight, { ALTURA_DO_SEMAFORO } from './TrafficLight';
 import { CheckIcon, GraveWarningIcon, HeartIcon, HourglassIcon, WarningIcon } from './HudIcons';
 import { BONUS_CHAMAR_GUARDA } from '../hooks/useGuardSystem';
@@ -21,7 +22,7 @@ const CARROS = { azul: carroAzul, branco: carroBranco, verde: carroVerde, vinho:
 // Os mesmos ciclos do Pedestrian e do AgenteAnimado, mas contados pelo relógio
 // da cena: assim o passo do boneco nunca se desencontra do deslocamento dele.
 const CAMINHADA = [bonecoAndando1, bonecoAndando2, bonecoAndando3, bonecoAndando2];
-const GUARDA_ANDANDO = [agente1, agente2, agente3, agente2];
+const GUARDA_ANDANDO = [agente1, agente2, agente3, agente8];
 const GUARDA_MULTANDO = [agente6, agente7];
 const BASE_DO_SEMAFORO = 335;
 

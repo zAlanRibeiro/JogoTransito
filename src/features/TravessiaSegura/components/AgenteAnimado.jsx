@@ -4,6 +4,7 @@ import agente2 from '../../../assets/agente_2.png';
 import agente3 from '../../../assets/agente_3.png';
 import agente6 from '../../../assets/agente_6.png';
 import agente7 from '../../../assets/agente_7.png';
+import agente8 from '../../../assets/agente_8.png';
 
 // Os quadros são IMPORTADOS, não montados como `/agente_${frame}.png`.
 //
@@ -16,7 +17,7 @@ import agente7 from '../../../assets/agente_7.png';
 // O Vite não reescreve caminho montado dentro de string; ele só resolve o
 // que passa por import. Importando, cada quadro ganha URL com hash e
 // acompanha a base do build, seja qual for a pasta onde o jogo esteja.
-const QUADROS = { 1: agente1, 2: agente2, 3: agente3, 6: agente6, 7: agente7 };
+const QUADROS = { 1: agente1, 2: agente2, 3: agente3, 6: agente6, 7: agente7, 8: agente8 };
 
 // Largura aproximada do sprite parado (altura 95px) e folga até o carro,
 // em px "locais" (coordenadas de antes da escala da arena). A folga
@@ -35,11 +36,14 @@ const POSICAO_PADRAO = 100; // usada se não der pra medir o carro (ex: ele saiu
 const MARGEM_DA_ARENA = 10;
 const PASSO = 15;
 
-// Ciclo de caminhada em "ping-pong": 1 (contato, perna da frente
-// plantada) -> 2 (passagem, pernas cruzando) -> 3 (contato oposto) -> 2
-// (passagem de novo) -> repete. Evita o salto visual de pular direto de
-// um contato pro outro sem passar pela pose de transição no meio.
-const SEQUENCIA_CAMINHADA = [1, 2, 3, 2];
+// Ciclo de caminhada: 1 (passada, perna clara à frente) -> 2 (passagem, as
+// pernas se cruzando embaixo do corpo) -> 3 (passada com a perna escura à
+// frente) -> 8 (passagem de volta) -> repete. Tudo feito só com camadas, sem
+// esticar o desenho: na passada 3 cada perna é virada na horizontal em torno
+// do quadril e as botas, sem virar, trocam de perna (a ponta continua para a
+// frente); nas passagens as duas pernas só são deslocadas uma em direção à
+// outra. (4 e 5 são poses de frente, sem uso aqui.)
+const SEQUENCIA_CAMINHADA = [1, 2, 3, 8];
 
 // Guarda que aparece, multa o carro parado sobre a faixa e vai embora.
 export default function AgenteAnimado({ onComplete, laneIndex, vehicleElsRef, arenaRef, larguraDaArena = 600 }) {
