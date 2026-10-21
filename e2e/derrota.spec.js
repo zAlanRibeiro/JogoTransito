@@ -73,3 +73,20 @@ test('a última vida para a cena onde o jogador morreu e leva ao céu', async ({
   expect(await contarVidas(page)).toBe(3);
   expect(await lerPosicaoY(page)).toBe(0);
 });
+
+test('do fim de jogo dá para voltar ao menu principal', async ({ page }) => {
+  await iniciarPartida(page);
+  await esperarSinalAberto(page);
+  await pararVeiculoSobreAFaixa(page, 1);
+  await perderTodasAsVidasNaFaixa(page);
+  await expect(page.getByRole('heading', { name: 'Fim de Jogo!' })).toBeVisible({ timeout: 10_000 });
+
+  await page.getByRole('button', { name: /Voltar ao menu/i }).click();
+  await expect(page.getByText('INICIAR JOGO')).toBeVisible();
+  await expect(page.locator('.cena-derrota')).toHaveCount(0);
+
+  // A partida seguinte começa do zero, como pelo "Tentar Novamente".
+  await page.getByText('INICIAR JOGO').click();
+  expect(await contarVidas(page)).toBe(3);
+  expect(await lerPosicaoY(page)).toBe(0);
+});
