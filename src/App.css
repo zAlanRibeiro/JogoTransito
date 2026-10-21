@@ -1551,6 +1551,22 @@ body {
   margin-top: 14px;
 }
 
+/* Tentar de novo e voltar ao menu, empilhados como na pausa. A margem fica no
+   grupo: no botão, o segundo herdaria os 14px de cima da regra acima. */
+.nit-gameover-botoes {
+  margin-top: 14px;
+}
+
+.nit-gameover-botoes .modal-btn {
+  margin-top: 0;
+}
+
+/* Título junto do texto, como na pausa: com a margem padrão do h3, o segundo
+   botão saía pela base do painel. */
+.modal-content.nit-gameover h3 {
+  margin-bottom: 8px;
+}
+
 .nit-gameover-icone {
   width: 44px;
   height: 44px;

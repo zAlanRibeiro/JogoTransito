@@ -964,9 +964,14 @@ export default function GameArena() {
                 </div>
               </div>
 
-              <button className="modal-btn nit-btn-com-icone" onClick={() => { tocar('clique'); restartGame(); }} autoFocus>
-                <RestartIcon size={15} /> Tentar Novamente
-              </button>
+              <div className="nit-pausa-botoes nit-gameover-botoes">
+                <button className="modal-btn nit-btn-com-icone" onClick={() => { tocar('clique'); restartGame(); }} autoFocus>
+                  <RestartIcon size={15} /> Tentar Novamente
+                </button>
+                <button className="modal-btn nit-btn-secundario nit-btn-com-icone" onClick={() => { tocar('clique'); goToMenu(); }}>
+                  <HomeIcon size={15} /> Voltar ao menu
+                </button>
+              </div>
             </div>
 
             {totalInfracoes > 0 && (
